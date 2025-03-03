@@ -1,1 +1,6 @@
-from shiny.express import input, render, ui
+#pip install shiny
+#pip install shinywidgets
+#shiny create --template dashboard-tips
+#import plotly.express as px
+#from shiny.express import input, render, ui
+#from shinywidgets import render_widget
