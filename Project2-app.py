@@ -1,3 +1,4 @@
+#In the terminal ran: pip install --upgrade pip wheel, pip install shiny, pip install --upgrade shiny htmltools
 from shiny import App, render, ui
 
 app_ui = ui.page_fluid(
@@ -5,7 +6,6 @@ app_ui = ui.page_fluid(
     ui.input_slider("n", "N", 0, 100, 20),
     ui.output_text_verbatim("txt"),
 )
-
 
 def server(input, output, session):
     @render.text
