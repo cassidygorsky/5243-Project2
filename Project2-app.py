@@ -1,16 +1,12 @@
 #Had to make some changes to my conda PATH on my computer to get this to work
-#Needed to install the shiny package and run pip install shiny
+#Needed to install the shiny package and run pip install shiny in the terminal
 
 ## Importing the necessary libraries
 from shiny import App, render, ui, reactive
-#from shiny.express import input, render, ui
 import pandas as pd
 
 ## Upload deault data
-default_data = pd.DataFrame({
-    'Name': ['Alice', 'Bob', 'Charlie'],
-    'Age': [25, 30, 35]
-})
+default_data = pd.read_csv('lung_disease_data.csv')
 
 # UI Layout
 app_ui = ui.page_fluid(
