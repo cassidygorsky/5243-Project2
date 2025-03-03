@@ -1,16 +1,45 @@
-#In the terminal ran: pip install --upgrade pip wheel, pip install shiny, pip install --upgrade shiny htmltools
-from shiny import App, render, ui
+#Had to make some changes to my conda PATH on my computer to get this to work
+#Needed to install the shiny package and run pip install shiny
 
+## Importing the necessary libraries
+from shiny import App, render, ui, reactive
+#from shiny.express import input, render, ui
+import pandas as pd
+
+## Upload deault data
+default_data = pd.DataFrame({
+    'Name': ['Alice', 'Bob', 'Charlie'],
+    'Age': [25, 30, 35]
+})
+
+# UI Layout
 app_ui = ui.page_fluid(
-    ui.panel_title("Hello Shiny!"),
-    ui.input_slider("n", "N", 0, 100, 20),
-    ui.output_text_verbatim("txt"),
+    ui.panel_title(ui.h2("Team 10- Project 2",class_="pt-4 pb-4 text-center")),
+    ui.h2("Upload a CSV File"),
+    ui.input_radio_buttons("data_source", "Choose Data Source", 
+                   choices=["Upload CSV", "Use Default Data"], selected="Use Default Data"),
+    ui.input_file("file", "Choose CSV File", multiple=False, accept=[".csv"]),
+    ui.output_table("table")  # To display the uploaded data
 )
 
+# Server Logic
 def server(input, output, session):
-    @render.text
-    def txt():
-        return f"n*2 is {input.n() * 2}"
+    # Reactive function to read uploaded file
+    @reactive.calc
+    def get_data():
+        if input.data_source() == "Use Default Data":
+            return default_data
+        file = input.file()
+        if not file:
+            return None  # No file uploaded yet
+        return pd.read_csv(file[0]["datapath"])  # Read CSV
 
+    # Render table output
+    @output
+    @render.table
+    def table():
+        data = get_data()
+        return data 
 
+# Run the Shiny App
 app = App(app_ui, server)
