@@ -4,22 +4,37 @@
 ## Importing the necessary libraries
 from shiny import App, render, ui, reactive
 import pandas as pd
+#import pyreadr  # For reading RDS files
 
 ## Upload deault data
 default_data = pd.read_csv('lung_disease_data.csv')
 
 # UI Layout
-app_ui = ui.page_fluid(
-    ui.panel_title(ui.h2("Team 10- Project 2",class_="pt-4 pb-4 text-center")),
-    ui.h2("Upload a CSV File"),
-    ui.input_radio_buttons("data_source", "Choose Data Source", 
-                   choices=["Upload CSV", "Use Default Data"], selected="Use Default Data"),
-    ui.input_file("file", "Choose CSV File", multiple=False, accept=[".csv"]),
-    ui.output_table("table")  # To display the uploaded data
+app_ui = ui.page_sidebar(
+    ui.sidebar( #sidebar for uploading data
+        # for data selection
+        ui.input_radio_buttons("data_source", "Choose Data Source: ", 
+                   choices=["Upload dataset", "Use Default Data"], selected="Use Default Data"),
+
+        ui.input_file("file", "Upload a dataset", multiple=False, accept=[".csv",".rds",".xlsx",".json"]),
+        title="Load Data",
+    ),
+    ui.page_fillable( #page for the tabs
+        ui.navset_card_tab(  
+            ui.nav_panel("Data Output", 
+                ui.output_table("table")),
+            ui.nav_panel("Cleaning & Preprocessing", "Panel B content"),
+            ui.nav_panel("Feature Engineering", "Panel C content"),
+            ui.nav_panel("EDA", "Panel D content"),
+            id="tab"
+            )  
+        ),
+    title="Team 10- 5243 Project 2",
 )
 
 # Server Logic
 def server(input, output, session):
+
     # Reactive function to read uploaded file
     @reactive.calc
     def get_data():
