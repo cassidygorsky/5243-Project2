@@ -19,11 +19,11 @@ pd.options.mode.chained_assignment = None
 default_data = pd.read_csv('lung_disease_data.csv')
 
 #conditionally show the upload button
-@render.ui
-def show_upload():
-    if input.data_source() == "upload":
-        return ui.input_file("file", "Upload a dataset", multiple=False, accept=[".csv", ".rds", ".xlsx", ".json"])
-    return None  # Hide if not selected 
+#@render.ui
+#def show_upload():
+    #if input.data_source() == "upload":
+        #return ui.input_file("file", "Upload a dataset", multiple=False, accept=[".csv", ".rds", ".xlsx", ".json"])
+    #return None  # Hide if not selected 
 
 # all the clean steps are coded as functions and then add into shiny
 ## data format clean (standardize string,  convert string into number if avaliable)
