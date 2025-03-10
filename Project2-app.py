@@ -18,13 +18,6 @@ pd.options.mode.chained_assignment = None
 ## Upload default data
 default_data = pd.read_csv('lung_disease_data.csv')
 
-#conditionally show the upload button
-#@render.ui
-#def show_upload():
-    #if input.data_source() == "upload":
-        #return ui.input_file("file", "Upload a dataset", multiple=False, accept=[".csv", ".rds", ".xlsx", ".json"])
-    #return None  # Hide if not selected 
-
 # all the clean steps are coded as functions and then add into shiny
 ## data format clean (standardize string,  convert string into number if avaliable)
 def clean_strings_and_convert_numbers(df):
@@ -229,8 +222,9 @@ app_ui = ui.page_sidebar(
         ui.input_radio_buttons("data_source", "Choose Data Source: ", 
                    choices=["Upload dataset", "Use Default Data"], selected="Use Default Data"),
 
-        ui.input_file("file", "Upload a dataset", multiple=False, accept=[".csv",".rds",".xlsx",".json"]),
-        #title="Load Data",
+        # This will conditionally show the file upload input
+        ui.output_ui("show_upload"),
+        title="Load Data",
     ),
     ui.page_fillable( #page for the tabs
         ui.navset_card_tab(
@@ -472,6 +466,13 @@ def server(input, output, session):
     removed_rows = reactive.Value(pd.DataFrame())
     outlier_modifications = reactive.Value(pd.DataFrame())
     
+    # Dynamically show the file upload input based on selection
+    @render.ui
+    def show_upload():
+        if input.data_source() == "Upload dataset":
+            return ui.input_file("file", "Upload a dataset", multiple=False, accept=[".csv", ".rds", ".xlsx", ".json"])
+        return None  # Hide if "Default Dataset" is selected
+
     # Reactive function to read uploaded file
     @reactive.calc
     def get_data():
