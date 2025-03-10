@@ -229,8 +229,7 @@ app_ui = ui.page_sidebar(
         ui.input_radio_buttons("data_source", "Choose Data Source: ", 
                    choices=["Upload dataset", "Use Default Data"], selected="Use Default Data"),
 
-        # Conditionally displayed file upload UI
-        ui.output_ui("show_upload"),
+        ui.input_file("file", "Upload a dataset", multiple=False, accept=[".csv",".rds",".xlsx",".json"]),
         #title="Load Data",
     ),
     ui.page_fillable( #page for the tabs
@@ -472,7 +471,7 @@ app_ui = ui.page_sidebar(
 def server(input, output, session):
     removed_rows = reactive.Value(pd.DataFrame())
     outlier_modifications = reactive.Value(pd.DataFrame())
-
+    
     # Reactive function to read uploaded file
     @reactive.calc
     def get_data():
