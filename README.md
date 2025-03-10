@@ -35,4 +35,11 @@ Several types of visualizations are available to help interpret the data:
 - **Correlation heatmaps** provide an overview of relationships between numerical features.  
 #### Statistical Insights  
 Summary statistics, including mean, median, minimum, maximum, and standard deviation, offer a quick overview of the dataset.  
-A correlation table helps identify potential relationships between numerical variables, which can be useful for deeper analysis.  
+A correlation table helps identify potential relationships between numerical variables, which can be useful for deeper analysis. 
+
+## Contributions
+* Yinhan Wang (yw4482)
+* Iris June Chang (ijc2119) - Feature Engineering 
+* Mingyan Xu (mx2294)
+* Cassidy Gorsky (cg3520)
+
