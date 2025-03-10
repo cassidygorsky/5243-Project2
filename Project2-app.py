@@ -227,9 +227,28 @@ app_ui = ui.page_sidebar(
     ),
     ui.page_fillable( #page for the tabs
         ui.navset_card_tab(
-                ui.nav_panel("User Guide", 
+                ui.nav_panel("User Guide",
+
                 ui.markdown("""
-                ### Exploratory Data Analysis  
+                ### **Feature Engineering**
+                The Feature Engineering section allows users to create new features and modify existing features, providing visual feedback to display the impact of such transformations.
+                #### Target Feature Transformation 
+                Select a column and transformation method (Log Transformation, Box-Cox, Yeo-Johnson) to see the impact of the transformation on the column. 
+                Note that the column must have missing values filled in from the data preprocessing step in order for the Box-Cox and Yeo-Johnson to yield results. 
+                Typically, the Box-Cox method requires that the column values are positive, but this has been considered such that non-positive values are accommodated for. 
+                #### Feature Selection
+                This method allows for dimensionality reduction. There are several feature selection methods:
+                - **PCA** allows the user to select number of PCA components and yields the variance explained by each component. Please ensure the data is properly preprocessed to yield results (e.g. handle missing values, scaling, hot-one encoding, etc.) 
+                - **Filter Zero-Var Variables** allows users to select variance threshold (from 0 to max(var)) for filtering and returns the features dropped at said threshold. Please ensure data is properly processed to yield results (e.g. fill missing values, etc.)
+                - **Manually Remove** allows users to select specific column(s) to manually remove from the table. 
+                #### Create New Features
+                This method allows users to create new features based on pre-existing features in the data. Input name of new feature, new feature formula, and the pre-existing features which are used in the new formula.
+                In the "Input New Formula," please ensure the columns are spelled correctly and the expression is a valid math expression. Also features should not have spaces in their names. 
+                
+                
+                """),
+                ui.markdown("""
+                ### **Exploratory Data Analysis** 
                 The EDA section allows users to explore data through interactive visualizations, summary statistics, and correlation analysis.  
                 Filters can be applied to focus on specific subsets of the dataset, and all outputs update dynamically based on user selections.                
                 #### Apply Filters  
@@ -480,7 +499,7 @@ def server(input, output, session):
             if input.method() == 'select' and input.feat_select() == 'pca':
                 data = encoded_data() if input.perform_encoding() else cleaned_data()
                 ui.update_slider("num_components", max = data.shape[1])
-            ui.update_selectize("rem_feat", choices=numeric_columns, session=session)
+            ui.update_selectize("rem_feat", choices=df.columns.tolist(), session=session)
             ui.update_selectize("feats", choices=numeric_columns, session=session)
 
             if input.select_all_na():
@@ -603,31 +622,39 @@ def server(input, output, session):
     @output
     @render.table
     def fe_modified_table():
-        if input.method()=='trans':
-            data = target_fe_calc()
-        elif input.method()=='select'  and input.feat_select() == 'pca' and pca_return is not None:
-            return
-        #     try:
-        #         data, text = pca_return()
-        #     except Exception:
-        #         data = encoded_data() if input.perform_encoding() else cleaned_data()
-        elif input.method()=='select' and input.feat_select() == 'zero' and zero_return is not None:
-            try:
-                data, features_to_drop = zero_return()
-            except Exception:
-                data = encoded_data() if input.perform_encoding() else cleaned_data()
-        elif input.method()=='new' and new_feat() is not None:
-            try:
-                data = new_feat()
-            except Exception:
-                data = encoded_data() if input.perform_encoding() else cleaned_data()
-        elif input.method()=='select' and input.feat_select() == 'rem':
-            data = manual_remove()
+        n = len(cleaned_data())
+        if n > 20:
+            if input.method()=='trans':
+                preview = pd.concat([target_fe_calc().head(10), target_fe_calc().tail(10)])
+            elif input.method()=='select'  and input.feat_select() == 'pca' and pca_return is not None:
+                return
+            #     try:
+            #         data, text = pca_return()
+            #     except Exception:
+            #         data = encoded_data() if input.perform_encoding() else cleaned_data()
+            elif input.method()=='select' and input.feat_select() == 'zero' and zero_return is not None:
+                try:
+                    data, features_to_drop = zero_return()
+                    preview = pd.concat([data.head(10), data.tail(10)])
+                except Exception:
+                    preview =pd.concat([encoded_data().head(10), encoded_data().tail(10)]) if input.perform_encoding() else pd.concat([cleaned_data().head(10), cleaned_data().tail(10)])
+            elif input.method()=='new' and new_feat() is not None:
+                try:
+                    data=new_feat()
+                    preview = pd.concat([data.head(10), data.tail(10)])
+                except Exception:
+                    preview =pd.concat([encoded_data().head(10), encoded_data().tail(10)]) if input.perform_encoding() else pd.concat([cleaned_data().head(10), cleaned_data().tail(10)])
+            elif input.method()=='select' and input.feat_select() == 'rem':
+                preview = pd.concat([manual_remove().head(10), manual_remove().tail(10)])
+            elif input.perform_encoding():
+                preview = pd.concat([encoded_data().head(10), encoded_data().tail(10)])
+            else:
+                preview = pd.concat([cleaned_data().head(10), cleaned_data().tail(10)])
         elif input.perform_encoding():
-            data = encoded_data()
+            preview = encoded_data()
         else:
-            data = cleaned_data()
-        return data
+            preview = cleaned_data()
+        return preview
 
 
 
