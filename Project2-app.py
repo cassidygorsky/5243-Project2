@@ -1,10 +1,10 @@
-#Had to make some changes to my conda PATH on my computer to get this to work
-#Needed to install the shiny package and run pip install shiny in the terminal
-
 ## Importing the necessary libraries
 from shiny import App, render, ui, reactive
 import pandas as pd
 import numpy as np
+import seaborn as sns
+import io
+import tempfile
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
 from sklearn.impute import SimpleImputer
 import matplotlib.pyplot as plt
@@ -13,6 +13,7 @@ from sklearn.feature_selection import VarianceThreshold
 from sklearn.decomposition import PCA
 pd.options.mode.chained_assignment = None
 #import pyreadr  # For reading RDS files
+
 
 ## Upload default data
 default_data = pd.read_csv('lung_disease_data.csv')
@@ -226,7 +227,25 @@ app_ui = ui.page_sidebar(
     ),
     ui.page_fillable( #page for the tabs
         ui.navset_card_tab(
-                ui.nav_panel("User Guide", "Info/tips on usage"),
+                ui.nav_panel("User Guide", 
+                ui.markdown("""
+                ### Exploratory Data Analysis  
+                The EDA section allows users to explore data through interactive visualizations, summary statistics, and correlation analysis.  
+                Filters can be applied to focus on specific subsets of the dataset, and all outputs update dynamically based on user selections.                
+                #### Apply Filters  
+                Filters help refine the dataset for analysis. For numerical columns, sliders allow selection of value ranges, while categorical columns can be filtered using dropdown menus.  
+                When a filter is adjusted, all visualizations and statistical summaries update automatically.  
+                #### Visualization  
+                Several types of visualizations are available to help interpret the data:  
+                - **Histograms** display the distribution of a single numerical variable.  
+                - **Scatter plots** show relationships between two numerical variables.  
+                - **Box plots** highlight the spread of data and detect potential outliers.  
+                - **Correlation heatmaps** provide an overview of relationships between numerical features.  
+                #### Statistical Insights  
+                Summary statistics, including mean, median, minimum, maximum, and standard deviation, offer a quick overview of the dataset.  
+                A correlation table helps identify potential relationships between numerical variables, which can be useful for deeper analysis.  
+                """)
+            ),
 
             ui.nav_panel("Data Output", 
                 ui.output_table("table")),
@@ -301,11 +320,8 @@ app_ui = ui.page_sidebar(
                             )
                         )
                     ),
-
-
             ui.nav_panel("Feature Engineering",
                         ui.row(
-
                             ui.column(4,
                          ui.input_radio_buttons(
                              "method",
@@ -315,17 +331,11 @@ app_ui = ui.page_sidebar(
                                  "select": "Feature Selection",
                                  "new": "Create New Features"}
                          )),
-
-
                              # ui.column(6,
                              #     ui.input_action_button(
                              #     "update_data", "Update Table", )
                              #           )
-
                             ),
-
-
-
                         # Target Feature Transformation
                         ui.row(
                         ui.panel_conditional(
@@ -345,11 +355,10 @@ app_ui = ui.page_sidebar(
 
                                 ui.output_plot("target_fe_plot")
                         )),
-
                         ui.row(
                         # Feature Selection Methods
                         ui.column(4,
-                        ui.panel_conditional(
+                            ui.panel_conditional(
                                     "input.method.includes('select')",
                             # "input.method === 'select'",
                             # drop down menu for which feature selection method
@@ -358,28 +367,22 @@ app_ui = ui.page_sidebar(
                                 "Select Feature Selection Method:",
                                 {"pca": "PCA", "zero": "Filter Zero-Var Features", "rem":"Manually Remove"}, selected=None))),
 
-
-
-
                             # if pca chosen
-
                             ui.panel_conditional("input.method.includes('select') && input.feat_select === 'pca'",
                         ui.column(4,
                             ui.input_slider("num_components", "# of PCA Components:", min=1, max=10, value=1)),
                             # text containing info about feature selection (e.g. feat dropped)
                             ui.output_text("pca_label"),
-
                             ),
 
                             # if zero variance features filter chosen
-
                             ui.panel_conditional(
                             "input.method.includes('select') && input.feat_select === 'zero'",
                                 ui.column(4,
                             ui.input_slider("var", "Variance Threshold:", min=0, max=10, value=0)),
+
                             # text containing info about feature selection (e.g. feat dropped)
                             ui.output_text("fd_label")
-
                             ),
 
                             # if manual removal chosen
@@ -387,16 +390,8 @@ app_ui = ui.page_sidebar(
                             ui.panel_conditional(
                             "input.method.includes('select') && input.feat_select === 'rem'",
                             ui.input_selectize("rem_feat", "Select Features to Remove:",choices=[], multiple=True),
-
                             )),
-
-
-
                         ),
-
-
-
-
                         ui.panel_conditional(
                             "input.method.includes('new')",
                             # drop down menu for which feature transformation method
@@ -417,27 +412,33 @@ app_ui = ui.page_sidebar(
 
                             ui.row(
                             ui.output_text("new_feat_info"))
-
                         ),
-
-
-
                         ui.output_table("fe_modified_table")
             ),
-
-
-
-
-
-
-
-            ui.nav_panel("EDA", "Panel D content"),
+                        ui.nav_panel("EDA", 
+                ui.row(
+                    ui.column(4,
+                        ui.input_select("plot_type", "Select Plot Type", 
+                                        choices=["Histogram", "Scatter Plot", "Box Plot", "Correlation Heatmap"], multiple=False),
+                        ui.input_select("x_var", "Choose X-axis Variable (for all plots)", choices=[], multiple=False),
+                        ui.input_select("y_var", "Choose Y-axis Variable (for scatterplot only)", choices=[], multiple=False),               
+                    ),
+                    ui.column(4,
+                        ui.output_ui("dynamic_filters_num"),
+                    ),
+                    ui.column(4,
+                        ui.output_ui("dynamic_filters_cate"),
+                    )
+                ),
+                ui.output_image("dynamic_plot", height="600px"),
+                ui.h4("Dataset Summary"),
+                ui.output_table("summary_stats"),
+                ui.output_table("correlation_table")
+            ),
             id="tab"
             )  
         ),
     title="Team 10- 5243 Project 2",
-
-
 )
 
 # Server Logic
@@ -448,15 +449,15 @@ def server(input, output, session):
     # Reactive function to read uploaded file
     @reactive.calc
     def get_data():
+        """Load dataset based on selection."""
         if input.data_source() == "Use Default Data":
-            default_data.columns = default_data.columns.str.strip().str.replace(' ', '_')
-            return default_data
+            return default_data.copy()
+        
         file = input.file()
         if not file:
             return None  # No file uploaded yet
-        df = pd.read_csv(file[0]["datapath"])
-        df.columns = df.columns.str.strip().str.replace(' ', '_')
-        return df  # Read CSV
+        df = pd.read_csv(file[0]["datapath"])  # Read uploaded CSV
+        return df
 
     # Render table output
     @output
@@ -496,7 +497,6 @@ def server(input, output, session):
                 ui.update_selectize("outlier_columns", selected=numeric_columns, session=session)
             elif input.deselect_all_outliers():
                 ui.update_selectize("outlier_columns", selected=[], session=session)
-
 
     @reactive.calc
     def cleaned_data():
@@ -599,8 +599,6 @@ def server(input, output, session):
     def encoded_table():
         return encoded_data()
 
-
-
     #### Feature Engineering
     @output
     @render.table
@@ -669,9 +667,6 @@ def server(input, output, session):
     #     return data
 
 
-
-
-
     # Feature engineering: Target FE Method
     @reactive.calc
     def target_fe_calc():
@@ -726,15 +721,12 @@ def server(input, output, session):
 
         return fig
 
-
     #PCA Feature Selection
     @reactive.calc
     def pca_return():
         data = encoded_data() if input.perform_encoding() else cleaned_data()
         s_method = input.feat_select()
         num_col = data.select_dtypes(include=['number']).columns.tolist()
-
-
 
         if s_method == 'pca':
             try:
@@ -777,7 +769,6 @@ def server(input, output, session):
                 if len(text) > 0:
                     return "    Explained Variance Ratio By Component: " + str(text)
 
-
     #Filter zero variance features
     @reactive.calc
     def zero_return():
@@ -792,8 +783,6 @@ def server(input, output, session):
             except Exception:
                 return "error"
 
-
-
     # gives features dropped for zero variance filtering
     @output
     @render.text
@@ -807,7 +796,6 @@ def server(input, output, session):
                 return "    No Features Dropped"
             return "    Features Dropped:" + str(features_to_drop)
 
-
     @reactive.calc
     def manual_remove():
         data = encoded_data() if input.perform_encoding() else cleaned_data()
@@ -815,11 +803,8 @@ def server(input, output, session):
             feats_to_remove = input.rem_feat()
             for f in feats_to_remove:
                 data = data.drop(columns=[f])
-
         return data
-
-
-
+    
     @reactive.calc
     def new_feat():
         data = encoded_data() if input.perform_encoding() else cleaned_data()
@@ -832,7 +817,6 @@ def server(input, output, session):
                 return None
             for f in feat_used:
                 x = x.replace(str(f),"data."+str(f))
-
 
             try:
                 data[name] = pd.eval(x, target= data)
@@ -856,6 +840,155 @@ def server(input, output, session):
                 return "New column '" + name + "' created!"
 
 
+    # EDA Part
+    # Load dataset after filtering
+    @reactive.calc
+    def filtered_data():
+        df = get_data()
+        if df is None:
+            return None
+
+        # Apply filters for the default dataset
+        if input.data_source() == "Use Default Data":
+            df = df[(df["Age"] >= input.filter_age()[0]) & (df["Age"] <= input.filter_age()[1])]
+            df = df[(df["Hospital Visits"] >= input.filter_hospital_visits()[0]) & (df["Hospital Visits"] <= input.filter_hospital_visits()[1])]
+            if input.filter_gender() != "All":
+                df = df[df["Gender"] == input.filter_gender()]
+            if input.filter_smoking() != "All":
+                df = df[df["Smoking Status"] == input.filter_smoking()]
+        
+        # Apply dynamic filtering for uploaded dataset
+        elif input.data_source() == "Upload dataset":
+            for col in df.columns:
+                if f"filter_{col}" in input:
+                    if pd.api.types.is_numeric_dtype(df[col]):
+                        df = df[(df[col] >= input[f"filter_{col}"]()[0]) & (df[col] <= input[f"filter_{col}"]()[1])]
+                    elif pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_categorical_dtype(df[col]):
+                        if input[f"filter_{col}"]() != "All":
+                            df = df[df[col] == input[f"filter_{col}"]()]
+        
+        return df
+
+    # filters for categorical columns
+    @output
+    @render.ui
+    def dynamic_filters_cate():
+        df = get_data()
+        if df is None:
+            return None  # No data available yet
+
+        # If using the default dataset, show predefined filters
+        if input.data_source() == "Use Default Data":
+            return ui.div(
+                ui.input_select("filter_gender", "Filter by Gender", 
+                                choices=["All"] + df["Gender"].dropna().unique().tolist(), multiple=False),
+                ui.input_select("filter_smoking", "Filter by Smoking Status", 
+                                choices=["All"] + df["Smoking Status"].dropna().unique().tolist(), multiple=False)
+            )
+
+        filter_ui = []        
+        categorical_cols = df.select_dtypes(include=["object", "category"]).columns.tolist()
+        for col in categorical_cols:
+            unique_values = df[col].dropna().unique().tolist()
+            if len(unique_values) > 0:
+                filter_ui.append(
+                    ui.input_select(f"filter_{col}", f"Filter by {col}", 
+                                    choices=["All"] + unique_values, multiple=False)
+                )
+        return ui.div(*filter_ui)
+
+    # filters for numerical columns
+    @output
+    @render.ui
+    def dynamic_filters_num():
+        """ Show filters based on selected dataset type """
+        df = get_data()
+        if df is None:
+            return None  # No data available yet
+
+        # If using the default dataset, show predefined filters
+        if input.data_source() == "Use Default Data":
+            return ui.div(
+                ui.input_slider("filter_age", "Filter by Age Range", 
+                                min=int(df["Age"].min()), max=int(df["Age"].max()), 
+                                value=(int(df["Age"].min()), int(df["Age"].max())), step=1),
+                ui.input_slider("filter_hospital_visits", "Filter by Hospital Visits", 
+                                min=int(df["Hospital Visits"].min()), max=int(df["Hospital Visits"].max()), 
+                                value=(int(df["Hospital Visits"].min()), int(df["Hospital Visits"].max())), step=1),
+            )
+
+        # If using an uploaded dataset, dynamically generate filters
+        filter_ui = []
+
+        numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+        for col in numeric_cols:
+            filter_ui.append(
+                ui.input_slider(f"filter_{col}", f"Filter by {col}", 
+                                min=float(df[col].min()), max=float(df[col].max()), 
+                                value=(float(df[col].min()), float(df[col].max())), step=0.1)
+            )
+        return ui.div(*filter_ui)
+
+    @reactive.Effect
+    def update_choices():
+        df = get_data()
+        if df is not None:
+            choices = df.columns.tolist()
+            ui.update_select("x_var", choices=choices)
+            ui.update_select("y_var", choices=choices)
+
+    # statistics summary
+    @output
+    @render.table
+    def summary_stats():
+        df = filtered_data()
+        if df is not None:
+            summary = df.describe().transpose().round(2)
+            summary.insert(0, 'Column', summary.index)
+            return summary
+    
+    # correlation table
+    @output
+    @render.table
+    def correlation_table():
+        df = filtered_data()
+        if df is not None:
+            correlation = df.select_dtypes(include=["number"]).corr().round(2)
+            correlation.insert(0, 'Column', correlation.index)
+            return correlation
+
+    # plots for features
+    @output
+    @render.image
+    def dynamic_plot():
+        df = filtered_data()
+        if df is None or df.empty:
+            return None
+        plot_type = input.plot_type()
+        temp_file = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+        file_path = temp_file.name
+        plt.figure(figsize=(10, 6))
+        if plot_type == "Histogram":
+            sns.histplot(df[input.x_var()], bins=30, kde=True)
+            plt.title("Histogram")
+            plt.xlabel(input.x_var())
+            plt.ylabel("Count")
+        elif plot_type == "Scatter Plot":
+            sns.scatterplot(x=df[input.x_var()], y=df[input.y_var()], alpha=0.5)
+            plt.title("Scatter Plot")
+            plt.xlabel(input.x_var())
+            plt.ylabel(input.y_var())
+        elif plot_type == "Box Plot":
+            sns.boxplot(x=df[input.x_var()])
+            plt.title("Box Plot (Outlier Detection)")
+            plt.xlabel(input.x_var())
+        elif plot_type == "Correlation Heatmap":
+            corr = df.select_dtypes(include=["number"]).corr()
+            sns.heatmap(corr, annot=True, cmap="coolwarm")
+            plt.title("Correlation Heatmap")
+        plt.tight_layout()
+        plt.savefig(file_path)
+        return {"src": file_path, "width": "800px"}
 
 # Run the Shiny App
 app = App(app_ui, server)
