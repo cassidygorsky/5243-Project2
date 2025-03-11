@@ -480,7 +480,10 @@ def server(input, output, session):
         
     # Reactive function to read uploaded file
     @reactive.calc
-    def get_data():
+    def get_data(df= None): #to do: need to create a button to call this on each page
+        if df != None:
+            return df
+
         if input.data_source() == "Use Default Data":
             return default_data.copy()
 
@@ -511,12 +514,14 @@ def server(input, output, session):
             print(f"Error reading file: {e}")
             return None  # Return None if there's an error
 
+
     # Render table output
     @output
     @render.table
-    def table():
-        data = get_data()
-        return data
+    def table(): #to do: need to create a button to call this on each page
+        #refresh data
+        df = get_data()
+        return df
 
     @reactive.effect
     def update_column_choices():
