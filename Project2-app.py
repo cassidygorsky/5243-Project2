@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 import io
+import re
 import tempfile
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
 from sklearn.impute import SimpleImputer
@@ -473,17 +474,22 @@ def server(input, output, session):
             return ui.input_file("file", "Upload a dataset", multiple=False, accept=[".csv", ".rds", ".xlsx", ".json"])
         return None  # Hide if "Default Dataset" is selected
 
+    def clean_column_name(col_name):
+        """Replace special characters with underscores to create valid input IDs."""
+        return re.sub(r'[^a-zA-Z0-9_]', '_', col_name)
+        
     # Reactive function to read uploaded file
     @reactive.calc
     def get_data():
         """Load dataset based on selection."""
         if input.data_source() == "Use Default Data":
             return default_data.copy()
-        
-        file = input.file()
-        if not file:
-            return None  # No file uploaded yet
-        df = pd.read_csv(file[0]["datapath"])  # Read uploaded CSV
+        else:
+            file = input.file()
+            if not file:
+                return None  # No file uploaded yet
+            df = pd.read_csv(file[0]["datapath"])  # Read uploaded CSV
+        df.columns = [clean_column_name(col) for col in df.columns]
         return df
 
     # Render table output
@@ -875,7 +881,10 @@ def server(input, output, session):
                 return "New column '" + name + "' created!"
 
 
-    # EDA Part
+
+
+
+    # EDA Part        
     # Load dataset after filtering
     @reactive.calc
     def filtered_data():
