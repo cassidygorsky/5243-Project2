@@ -40,6 +40,6 @@ A correlation table helps identify potential relationships between numerical var
 ## Contributions
 * Yinhan Wang (yw4482)
 * Iris June Chang (ijc2119) - Feature Engineering 
-* Mingyan Xu (mx2294)
+* Mingyan Xu (mx2294) - Exploratory Data Analysis 
 * Cassidy Gorsky (cg3520)
 
