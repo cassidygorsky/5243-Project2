@@ -473,15 +473,14 @@ def server(input, output, session):
         if input.data_source() == "Upload dataset":
             return ui.input_file("file", "Upload a dataset", multiple=False, accept=[".csv", ".rds", ".xlsx", ".json"])
         return None  # Hide if "Default Dataset" is selected
-
+    
+    # Replace special characters with underscores
     def clean_column_name(col_name):
-        """Replace special characters with underscores to create valid input IDs."""
         return re.sub(r'[^a-zA-Z0-9_]', '_', col_name)
         
     # Reactive function to read uploaded file
     @reactive.calc
     def get_data():
-        """Load dataset based on selection."""
         if input.data_source() == "Use Default Data":
             return default_data.copy()
         else:
@@ -882,8 +881,6 @@ def server(input, output, session):
 
 
 
-
-
     # EDA Part        
     # Load dataset after filtering
     @reactive.calc
@@ -945,7 +942,6 @@ def server(input, output, session):
     @output
     @render.ui
     def dynamic_filters_num():
-        """ Show filters based on selected dataset type """
         df = get_data()
         if df is None:
             return None  # No data available yet
