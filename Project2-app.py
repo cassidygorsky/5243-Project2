@@ -13,7 +13,7 @@ from scipy import stats
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.decomposition import PCA
 pd.options.mode.chained_assignment = None
-#import pyreadr  # For reading RDS files
+import pyreadr  # For reading RDS files. Had to manually install pyreadr through my anaconda prompt
 
 
 ## Upload default data
@@ -474,7 +474,7 @@ def server(input, output, session):
             return ui.input_file("file", "Upload a dataset", multiple=False, accept=[".csv", ".rds", ".xlsx", ".json"])
         return None  # Hide if "Default Dataset" is selected
     
-    # Replace special characters with underscores
+    # Replace special characters with underscores when dataset is uploaded
     def clean_column_name(col_name):
         return re.sub(r'[^a-zA-Z0-9_]', '_', col_name)
         
@@ -483,13 +483,33 @@ def server(input, output, session):
     def get_data():
         if input.data_source() == "Use Default Data":
             return default_data.copy()
-        else:
-            file = input.file()
-            if not file:
-                return None  # No file uploaded yet
-            df = pd.read_csv(file[0]["datapath"])  # Read uploaded CSV
-        df.columns = [clean_column_name(col) for col in df.columns]
-        return df
+
+        file = input.file()
+        if not file:
+            return None  # No file uploaded yet
+        # Get file extension
+        ext = file[0]["name"].split(".")[-1].lower()
+
+        #Read file based on format
+        try:
+            if ext == "csv":
+                df = pd.read_csv(file[0]["datapath"])
+                df.columns = [clean_column_name(col) for col in df.columns]
+            elif ext in ["xls", "xlsx"]:
+                df = pd.read_excel(file[0]["datapath"])
+                df.columns = [clean_column_name(col) for col in df.columns]
+            elif ext == "json":
+                df = pd.read_json(file[0]["datapath"])
+                df.columns = [clean_column_name(col) for col in df.columns]
+            elif ext == "rds":
+                df = pyreadr.read_r(file[0]["datapath"])[None]  # Extract first object
+                df.columns = [clean_column_name(col) for col in df.columns]
+            else:
+                return None  # Unsupported file type
+            return df
+        except Exception as e:
+            print(f"Error reading file: {e}")
+            return None  # Return None if there's an error
 
     # Render table output
     @output
