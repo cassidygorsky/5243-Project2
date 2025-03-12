@@ -269,9 +269,11 @@ app_ui = ui.page_sidebar(
             ),
 
             ui.nav_panel("Data Output", 
-                ui.output_table("table")),
-            ui.nav_panel("Cleaning & Preprocessing",
+                         ui.input_action_button("save_changes_cleaning", "Save Changes"),
+                         ui.output_table("table")),
+            ui.nav_panel("Cleaning & Preprocessing", 
                          # upper part: different operation columns
+                        #ui.input_action_button("save_changes_cleaning", "Save Changes"), #save changes button
                          ui.row(
                              # basic clean (string clean, number convert, duplication remove)
                              ui.column(2,
@@ -478,12 +480,18 @@ def server(input, output, session):
     def clean_column_name(col_name):
         return re.sub(r'[^a-zA-Z0-9_]', '_', col_name)
         
+    # Create a reactive data store to hold the dataset
+    stored_data = reactive.Value(None)  # Starts as None, will be set by get_data()
+
+    # Reset store_data when a new dataset is selected
+    @reactive.effect #run whenever it's dependencies change
+    def reset_data():
+        """When the user selects a new dataset, reset the stored dataset."""
+        stored_data.set(get_data())  # Set store_data to the freshly loaded dataset
+
     # Reactive function to read uploaded file
     @reactive.calc
-    def get_data(df= None): #to do: need to create a button to call this on each page
-        if df != None:
-            return df
-
+    def get_data(): #to do: need to create a button to call this on each page
         if input.data_source() == "Use Default Data":
             return default_data.copy()
 
@@ -514,14 +522,20 @@ def server(input, output, session):
             print(f"Error reading file: {e}")
             return None  # Return None if there's an error
 
-
     # Render table output
     @output
     @render.table
-    def table(): #to do: need to create a button to call this on each page
-        #refresh data
-        df = get_data()
-        return df
+    def table(): #refresh data
+        return stored_data.get()
+    
+    #save updated data after cleaning
+    @reactive.effect
+    def modify_data_cleaning():
+        """Modify data when 'Save Changes' is clicked in Tab 1."""
+        if input.save_changes_cleaning:
+            df = stored_data.get()
+            df["new_column"] = 2  # Example modification
+            stored_data.set(df)
 
     @reactive.effect
     def update_column_choices():
