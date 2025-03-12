@@ -269,7 +269,7 @@ app_ui = ui.page_sidebar(
             ),
 
             ui.nav_panel("Data Output", 
-                         ui.input_action_button("save_changes_cleaning", "Save Changes"),
+                         ui.input_action_button("save_changes_cleaning", "Save Changes",class_="btn-success"),
                          ui.output_table("table")),
             ui.nav_panel("Cleaning & Preprocessing", 
                          # upper part: different operation columns
@@ -481,7 +481,7 @@ def server(input, output, session):
         return re.sub(r'[^a-zA-Z0-9_]', '_', col_name)
         
     # Create a reactive data store to hold the dataset
-    stored_data = reactive.Value(default_data)  # Starts as None, will be set by get_data()
+    stored_data = reactive.Value(None)  # Starts as None, will be set by get_data()
 
     # Reset store_data when a new dataset is selected
     @reactive.effect #run whenever it's dependencies change
@@ -526,15 +526,17 @@ def server(input, output, session):
     @output
     @render.table
     def table(): #refresh data
-        return stored_data.get()
+        return stored_data
     
+    ## TEST SAVE BUTTON. To delete
     #save updated data after cleaning
-    @reactive.event(input.save_changes_cleaning, ignore_none=False)
+    @reactive.event(input.save_changes_cleaning)
     def modify_data_cleaning():
         """Modify data when 'Save Changes' is clicked in Tab 1."""
-        df = stored_data.get()
+        df = stored_data
         df["new_column"] = 2  # Example modification
-        stored_data.set(df)
+        #stored_data.set(df)
+        stored_data = df.copy()
 
     @reactive.effect
     def update_column_choices():
