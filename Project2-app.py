@@ -481,7 +481,7 @@ def server(input, output, session):
         return re.sub(r'[^a-zA-Z0-9_]', '_', col_name)
         
     # Create a reactive data store to hold the dataset
-    stored_data = reactive.Value(None)  # Starts as None, will be set by get_data()
+    stored_data = reactive.Value(default_data)  # Starts as None, will be set by get_data()
 
     # Reset store_data when a new dataset is selected
     @reactive.effect #run whenever it's dependencies change
@@ -529,13 +529,12 @@ def server(input, output, session):
         return stored_data.get()
     
     #save updated data after cleaning
-    @reactive.effect
+    @reactive.event(input.save_changes_cleaning, ignore_none=False)
     def modify_data_cleaning():
         """Modify data when 'Save Changes' is clicked in Tab 1."""
-        if input.save_changes_cleaning:
-            df = stored_data.get()
-            df["new_column"] = 2  # Example modification
-            stored_data.set(df)
+        df = stored_data.get()
+        df["new_column"] = 2  # Example modification
+        stored_data.set(df)
 
     @reactive.effect
     def update_column_choices():
