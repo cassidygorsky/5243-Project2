@@ -18,7 +18,7 @@ import chardet # type: ignore # detect unicode
 
 
 ## Upload default data
-default_data = pd.read_csv(r'C:\Users\86156\Desktop\lung_disease_data.csv')
+default_data = pd.read_csv('lung_disease_data.csv')
 
 # all the clean steps are coded as functions and then add into shiny
 ## data format clean (standardize string,  convert string into number if avaliable)
@@ -523,21 +523,18 @@ def server(input, output, session):
         return re.sub(r'[^a-zA-Z0-9_]', '_', col_name)
         
     # Create a reactive data store to hold the dataset
-    stored_data = reactive.Value(None)  # Starts as None, will be set by get_data()
-    trigger = reactive.Value(0)  # Separate trigger for reset_data()
+    stored_data = reactive.Value(get_data())  # Starts as None, will be set by get_data()
 
     # Reset store_data when a new dataset is selected
     #@reactive.event(input.data_source)
-    @reactive.effect #run whenever it's dependencies change
-    def reset_data():
-        """When the user selects a new dataset, reset the stored dataset.""" 
-        #trigger.get() # Depend on trigger to reset stored_data
-        stored_data.set(get_data())  # Set store_data to the freshly loaded dataset. depend on get_data()
+    #@reactive.effect #run whenever it's dependencies change
+    #def reset_data():
+        #"""When the user selects a new dataset, reset the stored dataset.""" 
+        #stored_data.set(get_data())  # Set store_data to the freshly loaded dataset. depend on get_data()
 
     # Reactive function to read uploaded file
     @reactive.calc
-    def get_data(): #to do: need to create a button to call this on each page
-        #trigger.set(trigger.get() + 1)
+    def get_data(): 
         if input.data_source() == "Use Default Data":
             return default_data.copy()
 
@@ -596,6 +593,7 @@ def server(input, output, session):
         df = stored_data.get()
         df["new_column"] = 2  # Example modification
         stored_data.set(df)
+    ## TO DELETE
 
     @reactive.effect
     def update_column_choices():
