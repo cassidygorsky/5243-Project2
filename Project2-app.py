@@ -238,6 +238,7 @@ app_ui = ui.page_sidebar(
 
         # This will conditionally show the file upload input
         ui.output_ui("show_upload"),
+        ui.input_action_button("save_initial_data", "Save Choosen Data"),
         title="Load Data",
     ),
     ui.page_fillable( #page for the tabs
@@ -523,14 +524,7 @@ def server(input, output, session):
         return re.sub(r'[^a-zA-Z0-9_]', '_', col_name)
         
     # Create a reactive data store to hold the dataset
-    stored_data = reactive.Value(get_data())  # Starts as None, will be set by get_data()
-
-    # Reset store_data when a new dataset is selected
-    #@reactive.event(input.data_source)
-    #@reactive.effect #run whenever it's dependencies change
-    #def reset_data():
-        #"""When the user selects a new dataset, reset the stored dataset.""" 
-        #stored_data.set(get_data())  # Set store_data to the freshly loaded dataset. depend on get_data()
+    stored_data = reactive.Value(None)  # Starts as None, will be set by get_data()
 
     # Reactive function to read uploaded file
     @reactive.calc
@@ -585,6 +579,12 @@ def server(input, output, session):
     def table(): #refresh data
         return stored_data.get()
     
+    # BUTTON: save data from get_data
+    @reactive.event(input.save_initial_data)
+    def save_initial_data():
+        stored_data.set(get_data())
+        update_column_choices() 
+    
     ## TEST SAVE BUTTON. To delete
     #save updated data after cleaning
     @reactive.event(input.save_changes_cleaning)
@@ -597,7 +597,7 @@ def server(input, output, session):
 
     @reactive.effect
     def update_column_choices():
-        df = get_data()
+        df = stored_data.get()
         if df is not None:
             numeric_columns = df.select_dtypes(include=["number"]).columns.tolist()
             ui.update_selectize("drop_na_columns", choices=df.columns.tolist(), session=session)
@@ -1128,4 +1128,3 @@ def server(input, output, session):
 
 # Run the Shiny App
 app = App(app_ui, server)
-app.run()
