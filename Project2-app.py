@@ -556,16 +556,16 @@ def server(input, output, session):
                     detected_encoding = "utf-8"
                 print(f"Detected encoding: {detected_encoding}")     
                 df = pd.read_csv(datapath, encoding=detected_encoding, on_bad_lines="skip")
-                df.columns = [clean_column_name(col) for col in df.columns]
+                #df.columns = [clean_column_name(col) for col in df.columns]
             elif ext in ["xls", "xlsx"]:
                 df = pd.read_excel(file[0]["datapath"])
-                df.columns = [clean_column_name(col) for col in df.columns]
+                #df.columns = [clean_column_name(col) for col in df.columns]
             elif ext == "json":
                 df = pd.read_json(file[0]["datapath"])
-                df.columns = [clean_column_name(col) for col in df.columns]
+                #df.columns = [clean_column_name(col) for col in df.columns]
             elif ext == "rds":
                 df = pyreadr.read_r(file[0]["datapath"])[None]  # Extract first object
-                df.columns = [clean_column_name(col) for col in df.columns]
+                #df.columns = [clean_column_name(col) for col in df.columns]
             else:
                 return None  # Unsupported file type
             return df
@@ -583,7 +583,8 @@ def server(input, output, session):
     @reactive.event(input.save_initial_data)
     def save_initial_data():
         stored_data.set(get_data())
-        update_column_choices() 
+        #stored_data = (initial_data.get())
+        #update_column_choices() 
     
     ## TEST SAVE BUTTON. To delete
     #save updated data after cleaning
@@ -595,7 +596,7 @@ def server(input, output, session):
         stored_data.set(df)
     ## TO DELETE
 
-    @reactive.effect
+    #@reactive.effect
     def update_column_choices():
         df = stored_data.get()
         if df is not None:
@@ -629,7 +630,7 @@ def server(input, output, session):
 
     @reactive.calc
     def cleaned_data():
-        df = get_data()
+        df = stored_data.get()
         if df is None:
             print("⚠ No data to clean")
             return None
@@ -682,7 +683,7 @@ def server(input, output, session):
             return df
 
     ### combine outliers and duplications
-    @reactive.calc
+    #@reactive.calc
     def modifications_data():
         dup = removed_rows()
         out_mod = outlier_modifications()
@@ -696,12 +697,6 @@ def server(input, output, session):
             return pd.concat([dup, out_mod], ignore_index=True)
         except Exception:
             return out_mod
-
-    # data preview
-    @output
-    @render.table
-    def table():
-        return get_data()
 
     @output
     @render.table
@@ -981,7 +976,7 @@ def server(input, output, session):
     # Load dataset after filtering
     @reactive.calc
     def filtered_data():
-        df = get_data()
+        df = stored_data.get()
         if df is None:
             return None
 
@@ -1010,7 +1005,7 @@ def server(input, output, session):
     @output
     @render.ui
     def dynamic_filters_cate():
-        df = get_data()
+        df = stored_data.get()
         if df is None:
             return None  # No data available yet
 
@@ -1038,7 +1033,7 @@ def server(input, output, session):
     @output
     @render.ui
     def dynamic_filters_num():
-        df = get_data()
+        df = stored_data.get()
         if df is None:
             return None  # No data available yet
 
@@ -1065,9 +1060,9 @@ def server(input, output, session):
             )
         return ui.div(*filter_ui)
 
-    @reactive.Effect
+    #@reactive.Effect
     def update_choices():
-        df = get_data()
+        df = stored_data
         if df is not None:
             choices = df.columns.tolist()
             ui.update_select("x_var", choices=choices)
