@@ -13,11 +13,12 @@ from scipy import stats
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.decomposition import PCA
 pd.options.mode.chained_assignment = None
-import pyreadr  # For reading RDS files. Had to manually install pyreadr through my anaconda prompt
+import pyreadr  # type: ignore # For reading RDS files. Had to manually install pyreadr through my anaconda prompt
+import chardet # type: ignore # detect unicode
 
 
 ## Upload default data
-default_data = pd.read_csv('lung_disease_data.csv')
+default_data = pd.read_csv(r'C:\Users\86156\Desktop\lung_disease_data.csv')
 
 # all the clean steps are coded as functions and then add into shiny
 ## data format clean (standardize string,  convert string into number if avaliable)
@@ -56,18 +57,31 @@ def remove_duplicates(df):
 
 ## missing value(able to replace missing value with mean, median, mode or just drop)
 ## user can handle specific columns also automately handle all numerical columns
-def handle_missing_values(df, strategy="mean", drop_columns=[]):
-    if len(drop_columns) > 0:
+original_data = {}
 
-        df = df.dropna(subset=drop_columns)
+def handle_missing_values(df, strategy="mean", columns=None):
+    global original_data
+    for col in df.columns:
+        if col not in original_data:
+            original_data[col] = df[col].copy()
+    if columns is not None:
+        cols_to_restore = [col for col in original_data if col not in columns]
+        for col in cols_to_restore:
+            df[col] = original_data[col] 
+    if columns is None:
+        columns = df.columns.tolist()
     else:
-        if strategy == "drop":
-            df = df.dropna()
-        else:
-            imputer = SimpleImputer(strategy=strategy)
-            num_cols = df.select_dtypes(include=["number"]).columns
-            df[num_cols] = imputer.fit_transform(df[num_cols])
+        columns = [col for col in columns if col in df.columns]
+    if not columns:
+        return df.copy()  
+    if strategy == "drop":
+        return df.dropna(subset=columns)
+    target_cols = [col for col in columns if col in df.select_dtypes(include=["number"]).columns]
 
+    if not target_cols:
+        return df.copy()  
+    imputer = SimpleImputer(strategy=strategy)
+    df[target_cols] = imputer.fit_transform(df[target_cols])
     return df
 
 ## outlier
@@ -77,10 +91,13 @@ def handle_outliers(df, method="IQR", z_thresh=3, columns=None, handling_method=
         numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
     else:
         numeric_cols = [col for col in columns if col in df.columns and pd.api.types.is_numeric_dtype(df[col])]
-    if not numeric_cols:
-        return df, pd.DataFrame()
 
-    # category as methods
+    if not numeric_cols:
+        return df.copy(), pd.DataFrame() 
+
+    df_clean = df.copy()
+    modifications = []
+
     if method == "IQR":
         if handling_method == "delete":
             mask = pd.Series(False, index=df.index)
@@ -91,19 +108,18 @@ def handle_outliers(df, method="IQR", z_thresh=3, columns=None, handling_method=
                 lower_bound = Q1 - 1.5 * IQR
                 upper_bound = Q3 + 1.5 * IQR
                 mask = mask | ((df[col] < lower_bound) | (df[col] > upper_bound))
-            outliers = df[mask]
             df_clean = df[~mask]
-            modifications = outliers.copy()
+            modifications = df[mask].copy()
+
         elif handling_method in ["mean", "median", "winsorize"]:
-            df_clean = df.copy()
-            modifications = []
             for col in numeric_cols:
                 Q1 = df[col].quantile(0.25)
                 Q3 = df[col].quantile(0.75)
                 IQR = Q3 - Q1
                 lower_bound = Q1 - 1.5 * IQR
                 upper_bound = Q3 + 1.5 * IQR
-                for idx, value in df_clean[col].iteritems():
+
+                for idx, value in df_clean[col].items():  
                     if value < lower_bound or value > upper_bound:
                         original_value = value
                         if handling_method == "mean":
@@ -112,6 +128,7 @@ def handle_outliers(df, method="IQR", z_thresh=3, columns=None, handling_method=
                             replacement = df[col].median()
                         elif handling_method == "winsorize":
                             replacement = lower_bound if value < lower_bound else upper_bound
+                        
                         modifications.append({
                             "index": idx,
                             "column": col,
@@ -119,54 +136,47 @@ def handle_outliers(df, method="IQR", z_thresh=3, columns=None, handling_method=
                             "replacement": replacement
                         })
                         df_clean.at[idx, col] = replacement
-                    modifications = pd.DataFrame(modifications)
-                else:
-                    df_clean = df.copy()
-                    modifications = pd.DataFrame()
-        elif method == "Z-score":
-            if handling_method == "delete":
-                mask = pd.Series(False, index=df.index)
-                for col in numeric_cols:
-                    mean = df[col].mean()
-                    std = df[col].std()
-                    lower_bound = mean - z_thresh * std
-                    upper_bound = mean + z_thresh * std
-                    mask = mask | ((df[col] < lower_bound) | (df[col] > upper_bound))
-                outliers = df[mask]
-                df_clean = df[~mask]
-                modifications = outliers.copy()
-            elif handling_method in ["mean", "median", "winsorize"]:
-                df_clean = df.copy()
-                modifications = []
-                for col in numeric_cols:
-                    mean = df[col].mean()
-                    std = df[col].std()
-                    lower_bound = mean - z_thresh * std
-                    upper_bound = mean + z_thresh * std
-                    for idx, value in df_clean[col].iteritems():
-                        if value < lower_bound or value > upper_bound:
-                            original_value = value
-                            if handling_method == "mean":
-                                replacement = mean
-                            elif handling_method == "median":
-                                replacement = df[col].median()
-                            elif handling_method == "winsorize":
-                                replacement = lower_bound if value < lower_bound else upper_bound
-                            modifications.append({
-                                "index": idx,
-                                "column": col,
-                                "original": original_value,
-                                "replacement": replacement
-                            })
-                            df_clean.at[idx, col] = replacement
-                        modifications = pd.DataFrame(modifications)
-                    else:
-                        df_clean = df.copy()
-                        modifications = pd.DataFrame()
-                else:
-                    df_clean = df.copy()
-                    modifications = pd.DataFrame()
-                return df_clean, modifications
+            modifications = pd.DataFrame(modifications)  
+
+    elif method == "Z-score":
+        if handling_method == "delete":
+            mask = pd.Series(False, index=df.index)
+            for col in numeric_cols:
+                mean = df[col].mean()
+                std = df[col].std()
+                lower_bound = mean - z_thresh * std
+                upper_bound = mean + z_thresh * std
+                mask = mask | ((df[col] < lower_bound) | (df[col] > upper_bound))
+            df_clean = df[~mask]
+            modifications = df[mask].copy()
+
+        elif handling_method in ["mean", "median", "winsorize"]:
+            for col in numeric_cols:
+                mean = df[col].mean()
+                std = df[col].std()
+                lower_bound = mean - z_thresh * std
+                upper_bound = mean + z_thresh * std
+
+                for idx, value in df_clean[col].items():  
+                    if value < lower_bound or value > upper_bound:
+                        original_value = value
+                        if handling_method == "mean":
+                            replacement = mean
+                        elif handling_method == "median":
+                            replacement = df[col].median()
+                        elif handling_method == "winsorize":
+                            replacement = lower_bound if value < lower_bound else upper_bound
+                        
+                        modifications.append({
+                            "index": idx,
+                            "column": col,
+                            "original": original_value,
+                            "replacement": replacement
+                        })
+                        df_clean.at[idx, col] = replacement
+            modifications = pd.DataFrame(modifications)  
+
+    return df_clean, modifications 
 
 ## standardize numerical data
 ## choose specific columns to normalize
@@ -178,27 +188,30 @@ def normalize_data(df, normalize_columns=[]):
 
 ## encoding categorical variables
 ## for variables' unique value lessthan a user set threshold using one-hot encoing, or use lable encoding. default threshold:10
-def encode_categorical_data(df, one_hot_threshold=10):
+def encode_categorical_data(df, one_hot_threshold=10, encoding_method="onehot"):
     df = df.copy()
     categorical_cols = df.select_dtypes(include=["object", "category"]).columns
     for col in categorical_cols:
         unique_values = df[col].nunique()
-        # skip if only one unique value
+        # Skip if only one unique value
         if unique_values <= 1:
             continue
-
         if unique_values <= one_hot_threshold:
-            encoder = OneHotEncoder(sparse_output=False, drop="first")
-            encoded_cols = encoder.fit_transform(df[[col]])
-            if encoded_cols.shape[1] == 0:
-                continue
-            encoded_df = pd.DataFrame(encoded_cols, columns=encoder.get_feature_names_out([col]), index=df.index)
-            df = df.drop(columns=[col])
-            df = pd.concat([df, encoded_df], axis=1)
+            if encoding_method == "onehot":
+                encoder = OneHotEncoder(sparse_output=False, drop="first")
+                encoded_cols = encoder.fit_transform(df[[col]])
+                if encoded_cols.shape[1] == 0:
+                    continue
+                encoded_df = pd.DataFrame(encoded_cols, columns=encoder.get_feature_names_out([col]), index=df.index)
+                df = df.drop(columns=[col])
+                df = pd.concat([df, encoded_df], axis=1)
+            elif encoding_method == "dummy":
+                df = pd.get_dummies(df, columns=[col], drop_first=True)
+                
         else:
-            from sklearn.preprocessing import LabelEncoder
             encoder = LabelEncoder()
             df[col] = encoder.fit_transform(df[col])
+    print(df.dtypes)
     return df
 
 
@@ -230,7 +243,30 @@ app_ui = ui.page_sidebar(
     ui.page_fillable( #page for the tabs
         ui.navset_card_tab(
                 ui.nav_panel("User Guide",
-
+                ui.markdown("""
+                ### **Data Cleaning & Preprocessing**  
+                The Cleaning & Preprocessing section provides tools to clean, transform, and prepare datasets for further analysis. Users can handle missing values, remove duplicates, detect and treat outliers, normalize numerical features, and encode categorical variables.  
+                #### Data Cleaning  
+                This section allows users to perform basic cleaning operations to ensure data consistency and accuracy:  
+                - Clean Strings & Convert Numbers automatically trims extra spaces, converts text-based numbers into numerical format, and standardizes string formatting.  
+                - Convert to Dates detects and converts date-like strings into proper date-time format.  
+                - Remove Duplicate Rows eliminates exact duplicate rows, ensuring data integrity.  
+                #### Missing Value Handling 
+                 Users can choose from the following strategies to handle missing values  
+                - **Mean, Median, or Mode Imputation** replaces missing values based on statistical measures.  
+                - **Drop Missing Values** allows users to remove rows or specific columns with missing values.  
+                - **Bulk Selection for NA Removal** provides options to select or deselect all columns for missing value treatment.  
+                #### Outlier Handling  
+                This section provides tools to detect and handle outliers  
+                - **Detection Methods**: Users can choose between the Interquartile Range (IQR) method or Z-score to identify outliers.  
+                - **Threshold Adjustment**: A Z-score threshold slider helps fine-tune outlier detection sensitivity.  
+                - **Handling Options**: Users can choose to delete outliers, replace them with mean/median values, or apply Winsorization to cap extreme values.  
+                #### Normalization    
+                - **Enable Normalization** applies standard scaling techniques.  
+                - **Column Selection**: Users can select specific numeric columns or apply normalization across all numeric features.  
+                #### Encoding   
+                - This part allows users to encode categorical columns. A thershold is set to let user choose when should a column should apply lable encoder.  If a columnn's unique value bigger than the threshold, lable encoder will be used. 
+                """),
                 ui.markdown("""
                 ### **Feature Engineering**
                 The Feature Engineering section allows users to create new features and modify existing features, providing visual feedback to display the impact of such transformations.
@@ -287,11 +323,11 @@ app_ui = ui.page_sidebar(
                              ui.column(2,
                                        ui.h4("Missing Value Handling"),
                                        ui.input_selectize("missing_value_strategy", "Missing Value Strategy:",
-                                                          choices=["mean", "median", "mode", "drop"], selected="mean"),
+                                                          choices=["mean", "median", "most_frequent", "drop"], selected="mean"),
                                        ui.input_checkbox("select_all_na", "Select All Columns for NA Removal",
                                                          value=False),
-                                       ui.input_checkbox("deselect_all_na", "Deselect All Columns for NA Removal",
-                                                         value=False),
+                                       #ui.input_checkbox("deselect_all_na", "Deselect All Columns for NA Removal",
+                                                        # value=False),
                                        ui.input_selectize("drop_na_columns", "Columns to Drop NA:", choices=[],
                                                           multiple=True)
                                        ),
@@ -307,8 +343,8 @@ app_ui = ui.page_sidebar(
                                                           choices=[], multiple=True),
                                        ui.input_checkbox("select_all_outliers", "Select All Numeric Columns",
                                                          value=False),
-                                       ui.input_checkbox("deselect_all_outliers", "Deselect All Numeric Columns",
-                                                         value=False),
+                                       #ui.input_checkbox("deselect_all_outliers", "Deselect All Numeric Columns",
+                                                         #value=False),
                                        ui.input_selectize("outlier_handling", "Handling Option:",
                                                           choices=["delete", "mean", "median", "winsorize"],
                                                           selected="delete")
@@ -319,8 +355,8 @@ app_ui = ui.page_sidebar(
                                        ui.input_checkbox("enable_normalization", "Enable Normalization", value=False),
                                        ui.input_checkbox("select_all_normalize", "Select All Numeric Columns",
                                                          value=False),
-                                       ui.input_checkbox("deselect_all_normalize", "Deselect All Numeric Columns",
-                                                         value=False),
+                                       #ui.input_checkbox("deselect_all_normalize", "Deselect All Numeric Columns",
+                                                         #value=False),
                                        ui.input_selectize("normalize_columns", "Columns to Normalize:", choices=[],
                                                           multiple=True)
                                        ),
@@ -328,19 +364,25 @@ app_ui = ui.page_sidebar(
                             ui.column(2,
                                 ui.h4("Encoding"),
                                 ui.input_checkbox("perform_encoding", "Perform Encoding", value=False),
+                               # ui.input_radio_buttons(
+                                #      "encoding_method", 
+                                 #    "Encoding Method:", 
+                                 #     choices=["onehot", "dummy"], 
+                                #      selected="onehot"
+                                 #   ),
                                 ui.input_slider("one_hot_threshold", "One-Hot Encoding Threshold", min=2, max=50, value=10)
                             )
                         ),
                         # lower part: left for data preview, right for modifications review
                         ui.row(
-                            ui.column(6,
+                            ui.column(12,
                                 ui.h4("Data Set Preview"),
                                 ui.output_table("preview_table")
                             ),
-                            ui.column(6,
-                                ui.h4("Modifications (Deleted/Changed Rows)"),
-                                ui.output_table("modifications_table")
-                            )
+                              # ui.column(6,
+                                #ui.h4("Modifications (Deleted/Changed Rows)"),
+                                #i.output_table("modifications_table")
+                           #)
                         )
                     ),
             ui.nav_panel("Feature Engineering",
@@ -503,12 +545,26 @@ def server(input, output, session):
         if not file:
             return None  # No file uploaded yet
         # Get file extension
-        ext = file[0]["name"].split(".")[-1].lower()
+        try:
+            ext = file[0]["name"].split(".")[-1].lower()
+            datapath = file[0].get("datapath", None)
+            if not datapath:
+                print("Invalid file path")
+                return None  
+        except Exception as e:
+            print(f"Metadata error: {e}")
+            return None
+
 
         #Read file based on format
         try:
             if ext == "csv":
-                df = pd.read_csv(file[0]["datapath"])
+                with open(datapath, "rb") as f:
+                    detected_encoding = chardet.detect(f.read(100000))["encoding"]
+                if detected_encoding is None:
+                    detected_encoding = "utf-8"
+                print(f"Detected encoding: {detected_encoding}")     
+                df = pd.read_csv(datapath, encoding=detected_encoding, on_bad_lines="skip")
                 df.columns = [clean_column_name(col) for col in df.columns]
             elif ext in ["xls", "xlsx"]:
                 df = pd.read_excel(file[0]["datapath"])
@@ -586,7 +642,7 @@ def server(input, output, session):
         if input.apply_date_conversion():
             df = convert_to_dates(df)
         ### missing value
-        df = handle_missing_values(df, strategy=input.missing_value_strategy(), drop_columns=input.drop_na_columns())
+        df = handle_missing_values(df, strategy=input.missing_value_strategy(), columns=input.drop_na_columns())
 
         ### duplications
         if input.remove_duplicates():
@@ -618,13 +674,12 @@ def server(input, output, session):
         return df
 
     ### encoding
-    @reactive.calc
     def encoded_data():
         df = cleaned_data()
         if df is None:
             return None
         if input.perform_encoding():
-            return encode_categorical_data(df, one_hot_threshold=input.one_hot_threshold())
+            return encode_categorical_data(df, one_hot_threshold=input.one_hot_threshold(), encoding_method="onehot")
         else:
             return df
 
@@ -1075,3 +1130,4 @@ def server(input, output, session):
 
 # Run the Shiny App
 app = App(app_ui, server)
+app.run()

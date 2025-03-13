@@ -3,6 +3,28 @@
 ## Choose dataset
 
 ## Data Cleaning and Preprocessing
+The Cleaning & Preprocessing section provides tools to clean, transform, and prepare datasets for further analysis. Users can handle missing values, remove duplicates, detect and treat outliers, normalize numerical features, and encode categorical variables.  
+#### Data Cleaning  
+This section allows users to perform basic cleaning operations to ensure data consistency and accuracy:  
+- Clean Strings & Convert Numbers automatically trims extra spaces, converts text-based numbers into numerical format, and standardizes string formatting.  
+- Convert to Dates detects and converts date-like strings into proper date-time format.  
+- Remove Duplicate Rows eliminates exact duplicate rows, ensuring data integrity.  
+#### Missing Value Handling 
+Users can choose from the following strategies to handle missing values  
+- **Mean, Median, or Mode Imputation** replaces missing values based on statistical measures.  
+- **Drop Missing Values** allows users to remove rows or specific columns with missing values.  
+- **Bulk Selection for NA Removal** provides options to select or deselect all columns for missing value treatment.  
+#### Outlier Handling  
+This section provides tools to detect and handle outliers  
+- **Detection Methods**: Users can choose between the Interquartile Range (IQR) method or Z-score to identify outliers.  
+- **Threshold Adjustment**: A Z-score threshold slider helps fine-tune outlier detection sensitivity.  
+- **Handling Options**: Users can choose to delete outliers, replace them with mean/median values, or apply Winsorization to cap extreme values.  
+#### Normalization    
+- **Enable Normalization** applies standard scaling techniques.  
+- **Column Selection**: Users can select specific numeric columns or apply normalization across all numeric features.  
+#### Encoding   
+- This part allows users to encode categorical columns. A thershold is set to let user choose when should a column should apply lable encoder.  If a columnn's unique value bigger than the threshold, lable encoder will be used. 
+
 
 ## **Feature Engineering**
 The Feature Engineering section allows users to create new features and modify existing features, providing visual feedback to display the impact of such transformations.
@@ -38,7 +60,7 @@ Summary statistics, including mean, median, minimum, maximum, and standard devia
 A correlation table helps identify potential relationships between numerical variables, which can be useful for deeper analysis. 
 
 ## Contributions
-* Yinhan Wang (yw4482)
+* Yinhan Wang (yw4482) - Data Cleaning and Preprocessing
 * Iris June Chang (ijc2119) - Feature Engineering 
 * Mingyan Xu (mx2294) - Exploratory Data Analysis 
 * Cassidy Gorsky (cg3520)
