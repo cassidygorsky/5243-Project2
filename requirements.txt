@@ -4,3 +4,12 @@ shinywidgets
 plotly
 pandas
 ridgeplot
+seaborn
+matplotlib
+scipy
+scikit-learn
+pyreadr
+chardet
+io
+re
+tempfile
