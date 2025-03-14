@@ -13,14 +13,14 @@ def server(input, output, session):
     @output
     @render.table
     def table_output():
-        return data()
+        return data.get()
 
     # Button click updates the dataframe and triggers reactivity
-    @reactive.effect
-    @reactive.event(input.refresh)
-    def update_data():
-        df = data()
-        df.loc[df["Name"] == "Alice", "Age"] += 1  # Modify Alice's age
-        data.set(df)  # Update the reactive value, triggering reactivity
+    #@reactive.effect
+    #@reactive.event(input.refresh)
+    #def update_data():
+        #df = data()
+        #df.loc[df["Name"] == "Alice", "Age"] += 1  # Modify Alice's age
+        #data.set(df)  # Update the reactive value, triggering reactivity
 
 app = App(app_ui, server)

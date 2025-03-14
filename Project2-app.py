@@ -306,7 +306,7 @@ app_ui = ui.page_sidebar(
             ),
 
             ui.nav_panel("Data Output", 
-                         ui.input_action_button("save_changes_cleaning", "Save Changes",class_="btn-success"),
+                         ui.input_action_button("save_changes_cleaning", "Save Changes"),
                          ui.output_table("table")),
             ui.nav_panel("Cleaning & Preprocessing", 
                          # upper part: different operation columns
@@ -524,14 +524,14 @@ def server(input, output, session):
         return re.sub(r'[^a-zA-Z0-9_]', '_', col_name)
         
     # Create a reactive data store to hold the dataset
-    stored_data = reactive.Value(None)  # Starts as None, will be set by get_data()
+    stored_data = reactive.Value(pd.DataFrame())  # Starts as None, will be set by get_data()
 
     # Reactive function to read uploaded file
     @reactive.calc
     def get_data(): 
         if input.data_source() == "Use Default Data":
-            return default_data.copy()
-
+            df_initial = default_data.copy()
+        
         file = input.file()
         if not file:
             return None  # No file uploaded yet
@@ -555,20 +555,20 @@ def server(input, output, session):
                 if detected_encoding is None:
                     detected_encoding = "utf-8"
                 print(f"Detected encoding: {detected_encoding}")     
-                df = pd.read_csv(datapath, encoding=detected_encoding, on_bad_lines="skip")
+                df_initial = pd.read_csv(datapath, encoding=detected_encoding, on_bad_lines="skip")
                 #df.columns = [clean_column_name(col) for col in df.columns]
             elif ext in ["xls", "xlsx"]:
-                df = pd.read_excel(file[0]["datapath"])
+                df_initial = pd.read_excel(file[0]["datapath"])
                 #df.columns = [clean_column_name(col) for col in df.columns]
             elif ext == "json":
-                df = pd.read_json(file[0]["datapath"])
+                df_initial = pd.read_json(file[0]["datapath"])
                 #df.columns = [clean_column_name(col) for col in df.columns]
             elif ext == "rds":
-                df = pyreadr.read_r(file[0]["datapath"])[None]  # Extract first object
+                df_initial = pyreadr.read_r(file[0]["datapath"])[None]  # Extract first object
                 #df.columns = [clean_column_name(col) for col in df.columns]
             else:
                 return None  # Unsupported file type
-            return df
+            return df_initial
         except Exception as e:
             print(f"Error reading file: {e}")
             return None  # Return None if there's an error
@@ -577,23 +577,34 @@ def server(input, output, session):
     @output
     @render.table
     def table(): #refresh data
-        return stored_data.get()
+        df = stored_data.get()
+        if df is None:
+            pd.DataFrame({"Message": ["No data available"]})
+        else:
+            return df 
     
     # BUTTON: save data from get_data
+    @reactive.effect
     @reactive.event(input.save_initial_data)
     def save_initial_data():
         stored_data.set(get_data())
         #stored_data = (initial_data.get())
-        #update_column_choices() 
+        #update_column_choices() '
     
     ## TEST SAVE BUTTON. To delete
     #save updated data after cleaning
+    @reactive.effect
     @reactive.event(input.save_changes_cleaning)
     def modify_data_cleaning():
-        """Modify data when 'Save Changes' is clicked in Tab 1."""
+        ##"""Modify data when 'Save Changes' is clicked in Tab 1."""
         df = stored_data.get()
-        df["new_column"] = 2  # Example modification
+        if df is None or df.empty:
+            print("⚠ Warning: No data to modify")
+        df = df.copy()  #  Create a new copy to trigger reactivity
+        df["new_column"] = 2  # example modification
         stored_data.set(df)
+        print(f"Data updated, new shape: {df.shape}")
+        return stored_data.get()
     ## TO DELETE
 
     #@reactive.effect
@@ -628,7 +639,7 @@ def server(input, output, session):
             elif input.deselect_all_outliers():
                 ui.update_selectize("outlier_columns", selected=[], session=session)
 
-    @reactive.calc
+    #@reactive.calc
     def cleaned_data():
         df = stored_data.get()
         if df is None:
@@ -799,7 +810,7 @@ def server(input, output, session):
 
 
     # Feature engineering: Target FE Method
-    @reactive.calc
+    #@reactive.calc
     def target_fe_calc():
         data = encoded_data() if input.perform_encoding() else cleaned_data()
         target = input.target_feat()
@@ -853,7 +864,7 @@ def server(input, output, session):
         return fig
 
     #PCA Feature Selection
-    @reactive.calc
+    #@reactive.calc
     def pca_return():
         data = encoded_data() if input.perform_encoding() else cleaned_data()
         s_method = input.feat_select()
@@ -901,7 +912,7 @@ def server(input, output, session):
                     return "    Explained Variance Ratio By Component: " + str(text)
 
     #Filter zero variance features
-    @reactive.calc
+    #@reactive.calc
     def zero_return():
         data = encoded_data() if input.perform_encoding() else cleaned_data()
         s_method = input.feat_select()
@@ -927,7 +938,7 @@ def server(input, output, session):
                 return "    No Features Dropped"
             return "    Features Dropped:" + str(features_to_drop)
 
-    @reactive.calc
+    #@reactive.calc
     def manual_remove():
         data = encoded_data() if input.perform_encoding() else cleaned_data()
         if input.feat_select() == 'rem':
@@ -936,7 +947,7 @@ def server(input, output, session):
                 data = data.drop(columns=[f])
         return data
     
-    @reactive.calc
+    #@reactive.calc
     def new_feat():
         data = encoded_data() if input.perform_encoding() else cleaned_data()
         if input.method() == 'new':
@@ -974,7 +985,7 @@ def server(input, output, session):
 
     # EDA Part        
     # Load dataset after filtering
-    @reactive.calc
+    #@reactive.calc
     def filtered_data():
         df = stored_data.get()
         if df is None:
