@@ -238,7 +238,7 @@ app_ui = ui.page_sidebar(
 
         # This will conditionally show the file upload input
         ui.output_ui("show_upload"),
-        ui.input_action_button("save_initial_data", "Save Choosen Data"),
+        ui.input_action_button("save_initial_data", "Save Chosen Data"),
         title="Load Data",
     ),
     ui.page_fillable( #page for the tabs
@@ -611,11 +611,16 @@ def server(input, output, session):
             ui.update_selectize("normalize_columns", choices=numeric_columns, session=session)
             ui.update_selectize("outlier_columns", choices=numeric_columns, session=session)
             ui.update_select("target_feat", label="Select Target Feature", choices=numeric_columns, session=session)
+
+
             variance = df[numeric_columns].var()
-            ui.update_slider("var", max=int(variance.max()))
+            if not pd.isnull(variance.max()):
+                ui.update_slider("var", max= variance.max())
+
             if input.method() == 'select' and input.feat_select() == 'pca':
                 data = encoded_data() if input.perform_encoding() else cleaned_data()
                 ui.update_slider("num_components", max = data.shape[1])
+
             ui.update_selectize("rem_feat", choices=df.columns.tolist(), session=session)
             ui.update_selectize("feats", choices=numeric_columns, session=session)
 
