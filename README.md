@@ -7,7 +7,7 @@ git clone https://github.com/cassidygorsky/5243-Project2.git
 ```
 2. Navigate to the project directory:
 ```{python} 
-cd STAT5243-Project1
+cd STAT5243-Project2
 ```
 3. Install required libraries:
 ```{python}
