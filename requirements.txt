@@ -13,3 +13,5 @@ chardet
 io
 re
 tempfile
+numpy
+
