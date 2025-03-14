@@ -985,31 +985,19 @@ def server(input, output, session):
 
     # EDA Part        
     # Load dataset after filtering
-    #@reactive.calc
+    @reactive.calc
     def filtered_data():
         df = stored_data.get()
+        df.columns = [clean_column_name(col) for col in df.columns]
         if df is None:
             return None
-
-        # Apply filters for the default dataset
-        if input.data_source() == "Use Default Data":
-            df = df[(df["Age"] >= input.filter_age()[0]) & (df["Age"] <= input.filter_age()[1])]
-            df = df[(df["Hospital Visits"] >= input.filter_hospital_visits()[0]) & (df["Hospital Visits"] <= input.filter_hospital_visits()[1])]
-            if input.filter_gender() != "All":
-                df = df[df["Gender"] == input.filter_gender()]
-            if input.filter_smoking() != "All":
-                df = df[df["Smoking Status"] == input.filter_smoking()]
-        
-        # Apply dynamic filtering for uploaded dataset
-        elif input.data_source() == "Upload dataset":
-            for col in df.columns:
-                if f"filter_{col}" in input:
-                    if pd.api.types.is_numeric_dtype(df[col]):
-                        df = df[(df[col] >= input[f"filter_{col}"]()[0]) & (df[col] <= input[f"filter_{col}"]()[1])]
-                    elif pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_categorical_dtype(df[col]):
-                        if input[f"filter_{col}"]() != "All":
-                            df = df[df[col] == input[f"filter_{col}"]()]
-        
+        for col in df.columns:
+            if f"filter_{col}" in input:
+                if pd.api.types.is_numeric_dtype(df[col]):
+                    df = df[(df[col] >= input[f"filter_{col}"]()[0]) & (df[col] <= input[f"filter_{col}"]()[1])]
+                elif pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_categorical_dtype(df[col]):
+                    if input[f"filter_{col}"]() != "All":
+                        df = df[df[col] == input[f"filter_{col}"]()]
         return df
 
     # filters for categorical columns
@@ -1017,17 +1005,9 @@ def server(input, output, session):
     @render.ui
     def dynamic_filters_cate():
         df = stored_data.get()
+        df.columns = [clean_column_name(col) for col in df.columns]
         if df is None:
-            return None  # No data available yet
-
-        # If using the default dataset, show predefined filters
-        if input.data_source() == "Use Default Data":
-            return ui.div(
-                ui.input_select("filter_gender", "Filter by Gender", 
-                                choices=["All"] + df["Gender"].dropna().unique().tolist(), multiple=False),
-                ui.input_select("filter_smoking", "Filter by Smoking Status", 
-                                choices=["All"] + df["Smoking Status"].dropna().unique().tolist(), multiple=False)
-            )
+            return None  # No data available
 
         filter_ui = []        
         categorical_cols = df.select_dtypes(include=["object", "category"]).columns.tolist()
@@ -1045,19 +1025,9 @@ def server(input, output, session):
     @render.ui
     def dynamic_filters_num():
         df = stored_data.get()
+        df.columns = [clean_column_name(col) for col in df.columns]
         if df is None:
             return None  # No data available yet
-
-        # If using the default dataset, show predefined filters
-        if input.data_source() == "Use Default Data":
-            return ui.div(
-                ui.input_slider("filter_age", "Filter by Age Range", 
-                                min=int(df["Age"].min()), max=int(df["Age"].max()), 
-                                value=(int(df["Age"].min()), int(df["Age"].max())), step=1),
-                ui.input_slider("filter_hospital_visits", "Filter by Hospital Visits", 
-                                min=int(df["Hospital Visits"].min()), max=int(df["Hospital Visits"].max()), 
-                                value=(int(df["Hospital Visits"].min()), int(df["Hospital Visits"].max())), step=1),
-            )
 
         # If using an uploaded dataset, dynamically generate filters
         filter_ui = []
@@ -1071,9 +1041,10 @@ def server(input, output, session):
             )
         return ui.div(*filter_ui)
 
-    #@reactive.Effect
+    @reactive.Effect
     def update_choices():
-        df = stored_data
+        df = stored_data.get()
+        df.columns = [clean_column_name(col) for col in df.columns]
         if df is not None:
             choices = df.columns.tolist()
             ui.update_select("x_var", choices=choices)
