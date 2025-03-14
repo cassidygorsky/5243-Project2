@@ -530,7 +530,7 @@ def server(input, output, session):
     @reactive.calc
     def get_data(): 
         if input.data_source() == "Use Default Data":
-            df_initial = default_data.copy()
+             return default_data.copy()
         
         file = input.file()
         if not file:
@@ -556,18 +556,15 @@ def server(input, output, session):
                     detected_encoding = "utf-8"
                 print(f"Detected encoding: {detected_encoding}")     
                 df_initial = pd.read_csv(datapath, encoding=detected_encoding, on_bad_lines="skip")
-                #df.columns = [clean_column_name(col) for col in df.columns]
             elif ext in ["xls", "xlsx"]:
                 df_initial = pd.read_excel(file[0]["datapath"])
-                #df.columns = [clean_column_name(col) for col in df.columns]
             elif ext == "json":
                 df_initial = pd.read_json(file[0]["datapath"])
-                #df.columns = [clean_column_name(col) for col in df.columns]
             elif ext == "rds":
                 df_initial = pyreadr.read_r(file[0]["datapath"])[None]  # Extract first object
-                #df.columns = [clean_column_name(col) for col in df.columns]
             else:
                 return None  # Unsupported file type
+            #df_initial.columns = [clean_column_name(col) for col in df_initial.columns]
             return df_initial
         except Exception as e:
             print(f"Error reading file: {e}")
@@ -588,8 +585,6 @@ def server(input, output, session):
     @reactive.event(input.save_initial_data)
     def save_initial_data():
         stored_data.set(get_data())
-        #stored_data = (initial_data.get())
-        #update_column_choices() '
     
     ## TEST SAVE BUTTON. To delete
     #save updated data after cleaning
@@ -607,7 +602,7 @@ def server(input, output, session):
         return stored_data.get()
     ## TO DELETE
 
-    #@reactive.effect
+    @reactive.effect
     def update_column_choices():
         df = stored_data.get()
         if df is not None:
