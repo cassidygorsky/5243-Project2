@@ -1,5 +1,20 @@
 # 5243-Project2
 
+## Project Installation
+1. Clone the Repository
+```{python} 
+git clone https://github.com/cassidygorsky/5243-Project2.git
+```
+2. Navigate to the project directory:
+```{python} 
+cd STAT5243-Project2
+```
+3. Install required libraries:
+```{python}
+pip install -r requirements.txt
+```
+
+
 ## Choose dataset
 
 ## Data Cleaning and Preprocessing
