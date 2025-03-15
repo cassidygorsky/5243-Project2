@@ -313,10 +313,10 @@ app_ui = ui.page_sidebar(
                 """)
             ),
 
-            ui.nav_panel("Data Output", 
+            ui.nav_panel("Data Output",
                          ui.input_action_button("save_changes_cleaning", "Save Changes"),
                          ui.output_table("table")),
-            ui.nav_panel("Cleaning & Preprocessing", 
+            ui.nav_panel("Cleaning & Preprocessing",
                          # upper part: different operation columns
                         #ui.input_action_button("save_changes_cleaning", "Save Changes"), #save changes button
                          ui.row(
@@ -374,17 +374,17 @@ app_ui = ui.page_sidebar(
                                 ui.h4("Encoding"),
                                 ui.input_checkbox("perform_encoding", "Perform Encoding", value=False),
                                # ui.input_radio_buttons(
-                                #      "encoding_method", 
-                                 #    "Encoding Method:", 
-                                 #     choices=["onehot", "dummy"], 
+                                #      "encoding_method",
+                                 #    "Encoding Method:",
+                                 #     choices=["onehot", "dummy"],
                                 #      selected="onehot"
                                  #   ),
                                 ui.input_slider("one_hot_threshold", "One-Hot Encoding Threshold", min=2, max=50, value=10)
                             ),
                             # Save Button (new column on the far right)
                             ui.column(2,
-                                ui.h4("Save Change"),  
-                                ui.input_action_button("save_clean_data", "Save Changes")  
+                                ui.h4("Save Change"),
+                                ui.input_action_button("save_clean_data", "Save Changes")
                                      )
                         ),
                         # lower part: left for data preview, right for modifications review
@@ -496,13 +496,13 @@ app_ui = ui.page_sidebar(
                         ),
                         ui.output_table("fe_modified_table")
             ),
-                        ui.nav_panel("EDA", 
+                        ui.nav_panel("EDA",
                 ui.row(
                     ui.column(4,
-                        ui.input_select("plot_type", "Select Plot Type", 
+                        ui.input_select("plot_type", "Select Plot Type",
                                         choices=["Histogram", "Scatter Plot", "Box Plot", "Correlation Heatmap"], multiple=False),
                         ui.input_select("x_var", "Choose X-axis Variable (for all plots)", choices=[], multiple=False),
-                        ui.input_select("y_var", "Choose Y-axis Variable (for scatterplot only)", choices=[], multiple=False),               
+                        ui.input_select("y_var", "Choose Y-axis Variable (for scatterplot only)", choices=[], multiple=False),
                     ),
                     ui.column(4,
                         ui.output_ui("dynamic_filters_num"),
@@ -518,7 +518,7 @@ app_ui = ui.page_sidebar(
                 ui.output_table("correlation_table")
             ),
             id="tab"
-            )  
+            )
         ),
     title="Team 10- 5243 Project 2",
 )
@@ -527,27 +527,27 @@ app_ui = ui.page_sidebar(
 def server(input, output, session):
     removed_rows = reactive.Value(pd.DataFrame())
     outlier_modifications = reactive.Value(pd.DataFrame())
-    
+
     # Dynamically show the file upload input based on selection
     @render.ui
     def show_upload():
         if input.data_source() == "Upload dataset":
             return ui.input_file("file", "Upload a dataset", multiple=False, accept=[".csv", ".rds", ".xlsx", ".json"])
         return None  # Hide if "Default Dataset" is selected
-    
+
     # Replace special characters with underscores when dataset is uploaded
     def clean_column_name(col_name):
         return re.sub(r'[^a-zA-Z0-9_]', '_', col_name)
-        
+
     # Create a reactive data store to hold the dataset
     stored_data = reactive.Value(pd.DataFrame())  # Starts as None, will be set by get_data()
 
     # Reactive function to read uploaded file
     @reactive.calc
-    def get_data(): 
+    def get_data():
         if input.data_source() == "Use Default Data":
              return default_data.copy()
-        
+
         file = input.file()
         if not file:
             return None  # No file uploaded yet
@@ -557,7 +557,7 @@ def server(input, output, session):
             datapath = file[0].get("datapath", None)
             if not datapath:
                 print("Invalid file path")
-                return None  
+                return None
         except Exception as e:
             print(f"Metadata error: {e}")
             return None
@@ -570,7 +570,7 @@ def server(input, output, session):
                     detected_encoding = chardet.detect(f.read(100000))["encoding"]
                 if detected_encoding is None:
                     detected_encoding = "utf-8"
-                print(f"Detected encoding: {detected_encoding}")     
+                print(f"Detected encoding: {detected_encoding}")
                 df_initial = pd.read_csv(datapath, encoding=detected_encoding, on_bad_lines="skip")
             elif ext in ["xls", "xlsx"]:
                 df_initial = pd.read_excel(file[0]["datapath"])
@@ -600,13 +600,13 @@ def server(input, output, session):
     def update_main_button():
         req(input.save_initial_data())
         ui.update_action_button("save_initial_data", label = "Reset Data")
-    
+
     # BUTTON: save data from get_data
     @reactive.effect
     @reactive.event(input.save_initial_data)
     def save_initial_data():
         stored_data.set(get_data())
-    
+
     ## TEST SAVE BUTTON. To delete
     #save updated data after cleaning
     @reactive.effect
@@ -659,20 +659,20 @@ def server(input, output, session):
                 ui.update_selectize("outlier_columns", selected=numeric_columns, session=session)
             elif input.deselect_all_outliers():
                 ui.update_selectize("outlier_columns", selected=[], session=session)
-    
+
     ### save cleaned data
     @reactive.effect
-    @reactive.event(input.save_clean_data) 
+    @reactive.event(input.save_clean_data)
     def save_final_data():
-        df = encoded_data() if input.perform_encoding() else cleaned_data()  
+        df = encoded_data() if input.perform_encoding() else cleaned_data()
         if df is None or df.empty:
-            print("⚠ Warning: No data to save") 
+            print("⚠ Warning: No data to save")
             return
-        df = df.copy()  
-        stored_data.set(df)  
-        print(f"Data saved successfully, shape: {df.shape}") 
+        df = df.copy()
+        stored_data.set(df)
+        print(f"Data saved successfully, shape: {df.shape}")
         return stored_data.get()
-    
+
     #@reactive.calc
     def cleaned_data():
         df = stored_data.get()
