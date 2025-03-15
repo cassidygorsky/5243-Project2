@@ -13,4 +13,4 @@ chardet
 re
 tempfile
 numpy==1.21.6
-pip ==24.2
+pip
