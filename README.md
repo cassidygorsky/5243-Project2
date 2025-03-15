@@ -43,7 +43,7 @@ This section provides tools to detect and handle outliers
 
 
 ## **Feature Engineering**
-The Feature Engineering section allows users to create new features and modify existing features, providing visual feedback to display the impact of such transformations.
+The Feature Engineering section allows users to create new features and modify existing features, providing visual feedback to display the impact of such transformations. Click the Update View button to see the effect on transformations on the preview data table.
 #### Target Feature Transformation 
 Select a column and transformation method (Log Transformation, Box-Cox, Yeo-Johnson) to see the impact of the transformation on the column. 
 Note that the column must have missing values filled in from the data preprocessing step in order for the Box-Cox and Yeo-Johnson to yield results. 
