@@ -215,12 +215,13 @@ def encode_categorical_data(df, one_hot_threshold=10, encoding_method="onehot"):
     return df
 
 
+#function for zero variance filtering
 def zero_var(data, t):
     num_col = data.select_dtypes(include=['number']).columns.tolist()
 
     if not data.isnull().values.any():
         vt = VarianceThreshold(threshold=t)
-        x_num = data[num_col]
+        x_num = data[num_col].fillna(0)
         vt.fit(x_num)
         features_to_keep = x_num.columns[vt.get_support()]
         features_to_drop = [col for col in x_num.columns if col not in features_to_keep]
@@ -252,7 +253,6 @@ app_ui = ui.page_sidebar(
                 At any point in the analysis, to reset the data to the original dataset, press the Reset Data button on the left side panel.    
                 """
                 ),
-
                 ui.markdown("""
                 ### **Data Cleaning & Preprocessing**  
                 The Cleaning & Preprocessing section provides tools to clean, transform, and prepare datasets for further analysis. Users can handle missing values, remove duplicates, detect and treat outliers, normalize numerical features, and encode categorical variables.  
@@ -293,8 +293,6 @@ app_ui = ui.page_sidebar(
                 #### Create New Features
                 This method allows users to create new features based on pre-existing features in the data. Input name of new feature, new feature formula, and the pre-existing features which are used in the new formula.
                 In the "Input New Formula," please ensure the columns are spelled correctly and the expression is a valid math expression. Also features should not have spaces in their names. 
-                
-                
                 """),
                 ui.markdown("""
                 ### **Exploratory Data Analysis** 
@@ -411,13 +409,11 @@ app_ui = ui.page_sidebar(
                                  "trans": "Target Feature Transformation",
                                  "select": "Feature Selection",
                                  "new": "Create New Features"}, selected = None
-                         )),
+                            )
+                        ),
                              ui.column(3,
                                 ui.row(
-                                 ui.input_action_button(
-                                 "update_fe_data", "Update View"),
-                                    ui.input_action_button(
-                                 "reset_fe_data", "Reset to Cleaned Data", )
+                                 ui.input_action_button("update_fe_data", "Update View"),
                                     )
                                 ),
 
@@ -465,7 +461,7 @@ app_ui = ui.page_sidebar(
                             ui.panel_conditional(
                             "input.method.includes('select') && input.feat_select === 'zero'",
                                 ui.column(4,
-                            ui.input_slider("var", "Variance Threshold:", min=0, max=10, value=0)),
+                            ui.input_slider("var", "Variance Threshold:", min=0, max=10, value=0.1, step=0.1)),
 
                             # text containing info about feature selection (e.g. feat dropped)
                             ui.output_text("fd_label")
@@ -481,7 +477,6 @@ app_ui = ui.page_sidebar(
                         ui.panel_conditional(
                             "input.method.includes('new')",
                             # drop down menu for which feature transformation method
-                            #     ui.output_text_verbatim("instructions"),############3
                         ui.row(
                         ui.column(4,
                                       ui.input_text(
@@ -773,7 +768,7 @@ def server(input, output, session):
     @reactive.effect
     @reactive.event(input.update_fe_data)
     def save_fe_data():
-        df = stored_data.get()
+        df = encoded_data() if input.perform_encoding() else cleaned_data()
         if df is None or df.empty:
             print("⚠ Warning: No data to modify")
         # Create a new copy to trigger reactivity
@@ -807,17 +802,6 @@ def server(input, output, session):
         print(f"Data updated, new shape: {df.shape}")
         return stored_data.get()
 
-    @reactive.effect
-    @reactive.event(input.reset_fe_data)
-    def reset_fe():
-        df = stored_data.get()
-        if df is None or df.empty:
-            print("⚠ Warning: No data to modify")
-        df = df.copy()  # Create a new copy to trigger reactivity
-        ##add in clean data end copy
-        stored_data.set(df)
-        print(f"Data updated, new shape: {df.shape}")
-        return stored_data.get()
 
     #feature engineering data table
     @output
@@ -827,7 +811,7 @@ def server(input, output, session):
         if df is None:
             pd.DataFrame({"Message": ["No data available"]})
         else:
-            return df
+            return pd.concat([df.head(10), df.tail(10)])
 
 
     # Feature engineering: Target FE Method
@@ -906,21 +890,7 @@ def server(input, output, session):
             except Exception:
                 return None
 
-    #Plot of PCA--it wasn't working so i left it out for now
-    # @output
-    # @render.plot
-    # def pca_plot():
-    #     if pca_return() is not None and input.num_components()>1:
-    #         pca_result, text = pca_return()
-    #
-    #         plt.figure()
-    #         plt.scatter(pca_result[:, 0], pca_result[:, 1], alpha=0.7, edgecolors='k')
-    #         plt.xlabel('Principle 1')
-    #         plt.ylabel('Principle 2')
-    #         plt.title('Principle 1 vs Principle 2')
-    #
-    #         return plt
-
+    #info about pca label
     @output
     @render.text
     def pca_label():
@@ -933,7 +903,7 @@ def server(input, output, session):
                     return "    Explained Variance Ratio By Component: " + str(text)
 
     #Filter zero variance features
-    #@reactive.calc
+    @reactive.calc
     def zero_return():
         data = stored_data.get()
         s_method = input.feat_select()
