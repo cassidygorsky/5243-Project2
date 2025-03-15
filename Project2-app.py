@@ -1,5 +1,5 @@
 ## Importing the necessary libraries
-from shiny import App, render, ui, reactive
+from shiny import App, render, ui, reactive, req
 import pandas as pd
 import numpy as np
 import seaborn as sns
@@ -271,6 +271,7 @@ app_ui = ui.page_sidebar(
                 ui.markdown("""
                 ### **Feature Engineering**
                 The Feature Engineering section allows users to create new features and modify existing features, providing visual feedback to display the impact of such transformations.
+                After inputting a feature engineering step, please press the "Update View" button to see the changes reflected in the data table. 
                 #### Target Feature Transformation 
                 Select a column and transformation method (Log Transformation, Box-Cox, Yeo-Johnson) to see the impact of the transformation on the column. 
                 Note that the column must have missing values filled in from the data preprocessing step in order for the Box-Cox and Yeo-Johnson to yield results. 
@@ -395,7 +396,7 @@ app_ui = ui.page_sidebar(
                              {
                                  "trans": "Target Feature Transformation",
                                  "select": "Feature Selection",
-                                 "new": "Create New Features"}
+                                 "new": "Create New Features"}, selected = None
                          )),
                              ui.column(6,
                                  ui.input_action_button(
@@ -580,9 +581,10 @@ def server(input, output, session):
         else:
             return df
 
-    @reactive.event(input.save_initial_data)
+    @reactive.effect
     def update_main_button():
-        ui.update_action_button("save_initial_data", "Reset Data")
+        req(input.save_initial_data())
+        ui.update_action_button("save_initial_data", label = "Reset Data")
     
     # BUTTON: save data from get_data
     @reactive.effect
