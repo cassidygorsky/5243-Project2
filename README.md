@@ -16,7 +16,7 @@ pip install -r requirements.txt
 
 
 ## Choose dataset
-The user first sees a screen that has a panel on the left side and can choose if they want to use the default database or upload a database on their own to analyze. The default database is from [Kaggle](https://www.kaggle.com/datasets/samikshadalvi/lungs-diseases-dataset) and contains detailed information about patients suffering from various lung conditions and if they have recovered from their lung disease. The uploaded datasets can be in various formats (e.g., CSV, Excel, JSON, and RDS). The user can then select the ***Import Data*** button which will save the dataset to further analyze it. The user can reset the dataset they want to use by clicking the ***Import Data*** button again in the panel.
+The user first sees a screen that has a panel on the left side and can choose if they want to use the default database or upload a database on their own to analyze. The default database is from [Kaggle](https://www.kaggle.com/datasets/samikshadalvi/lungs-diseases-dataset) and contains detailed information about patients suffering from various lung conditions and if they have recovered from their lung disease. The uploaded datasets can be in various formats (e.g., CSV, Excel, JSON, and RDS). The user can then select the ***Reset Data*** button which will save the dataset to further analyze it. The user can reset the dataset they want to use by clicking the ***Reset Data*** button again in the panel.
 
 ## Data Cleaning and Preprocessing
 The Cleaning & Preprocessing section provides tools to clean, transform, and prepare datasets for further analysis. Users can handle missing values, remove duplicates, detect and treat outliers, normalize numerical features, and encode categorical variables.  
