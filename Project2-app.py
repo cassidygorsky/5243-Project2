@@ -314,7 +314,6 @@ app_ui = ui.page_sidebar(
             ),
 
             ui.nav_panel("Data Output",
-                         ui.input_action_button("save_changes_cleaning", "Save Changes"),
                          ui.output_table("table")),
             ui.nav_panel("Cleaning & Preprocessing",
                          # upper part: different operation columns
@@ -607,21 +606,6 @@ def server(input, output, session):
     def save_initial_data():
         stored_data.set(get_data())
 
-    ## TEST SAVE BUTTON. To delete
-    #save updated data after cleaning
-    @reactive.effect
-    @reactive.event(input.save_changes_cleaning)
-    def modify_data_cleaning():
-        ##"""Modify data when 'Save Changes' is clicked in Tab 1."""
-        df = stored_data.get()
-        if df is None or df.empty:
-            print("⚠ Warning: No data to modify")
-        df = df.copy()  #  Create a new copy to trigger reactivity
-        df["new_column"] = 2  # example modification
-        stored_data.set(df)
-        print(f"Data updated, new shape: {df.shape}")
-        return stored_data.get()
-    ## TO DELETE
 
     @reactive.effect
     def update_column_choices():
