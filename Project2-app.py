@@ -244,6 +244,15 @@ app_ui = ui.page_sidebar(
     ui.page_fillable( #page for the tabs
         ui.navset_card_tab(
                 ui.nav_panel("User Guide",
+                ui.markdown(
+                """
+                ### **Load Data**
+                In left side panel, choose whether to upload dataset or use the default data. The default data is lung_disease_data.csv as is seen in the Github repository.
+                Afterward, press the Import Data button on the left side panel to load the data. This original data can be seen in a table in the Data Output tab.
+                At any point in the analysis, to reset the data to the original dataset, press the Reset Data button on the left side panel.    
+                """
+                ),
+
                 ui.markdown("""
                 ### **Data Cleaning & Preprocessing**  
                 The Cleaning & Preprocessing section provides tools to clean, transform, and prepare datasets for further analysis. Users can handle missing values, remove duplicates, detect and treat outliers, normalize numerical features, and encode categorical variables.  
@@ -398,10 +407,15 @@ app_ui = ui.page_sidebar(
                                  "select": "Feature Selection",
                                  "new": "Create New Features"}, selected = None
                          )),
-                             ui.column(6,
+                             ui.column(3,
+                                ui.row(
                                  ui.input_action_button(
-                                 "update_fe_data", "Update View", )
-                                       )
+                                 "update_fe_data", "Update View"),
+                                    ui.input_action_button(
+                                 "reset_fe_data", "Reset to Cleaned Data", )
+                                    )
+                                ),
+
                             ),
                         # Target Feature Transformation
                         ui.row(
@@ -767,13 +781,11 @@ def server(input, output, session):
             except Exception:
                 df = df.copy()
         elif input.method() == 'new':
-            df = new_feat()
-            df = df.copy()
-            # try:
-            #     data = new_feat()
-            #     stored_data.set(new_feat())
-            # except Exception:
-            #     return
+            try:
+                df = new_feat()
+                df = df.copy()
+            except Exception:
+                df = df.copy()
         elif input.method() == 'select' and input.feat_select() == 'rem':
             df=manual_remove()
             df = df.copy()
@@ -781,7 +793,19 @@ def server(input, output, session):
         print(f"Data updated, new shape: {df.shape}")
         return stored_data.get()
 
+    @reactive.effect
+    @reactive.event(input.reset_fe_data)
+    def reset_fe():
+        df = stored_data.get()
+        if df is None or df.empty:
+            print("⚠ Warning: No data to modify")
+        df = df.copy()  # Create a new copy to trigger reactivity
+        ##add in clean data end copy
+        stored_data.set(df)
+        print(f"Data updated, new shape: {df.shape}")
+        return stored_data.get()
 
+    #feature engineering data table
     @output
     @render.table
     def fe_modified_table():
@@ -790,45 +814,12 @@ def server(input, output, session):
             pd.DataFrame({"Message": ["No data available"]})
         else:
             return df
-        # n = len(cleaned_data())
-        # if n > 20:
-        #     if input.method()=='trans':
-        #         preview = pd.concat([target_fe_calc().head(10), target_fe_calc().tail(10)])
-        #     elif input.method()=='select'  and input.feat_select() == 'pca' and pca_return is not None:
-        #         return
-        #     #     try:
-        #     #         data, text = pca_return()
-        #     #     except Exception:
-        #     #         data = encoded_data() if input.perform_encoding() else cleaned_data()
-        #     elif input.method()=='select' and input.feat_select() == 'zero' and zero_return is not None:
-        #         try:
-        #             data, features_to_drop = zero_return()
-        #             preview = pd.concat([data.head(10), data.tail(10)])
-        #         except Exception:
-        #             preview =pd.concat([encoded_data().head(10), encoded_data().tail(10)]) if input.perform_encoding() else pd.concat([cleaned_data().head(10), cleaned_data().tail(10)])
-        #     elif input.method()=='new' and new_feat() is not None:
-        #         try:
-        #             data=new_feat()
-        #             preview = pd.concat([data.head(10), data.tail(10)])
-        #         except Exception:
-        #             preview =pd.concat([encoded_data().head(10), encoded_data().tail(10)]) if input.perform_encoding() else pd.concat([cleaned_data().head(10), cleaned_data().tail(10)])
-        #     elif input.method()=='select' and input.feat_select() == 'rem':
-        #         preview = pd.concat([manual_remove().head(10), manual_remove().tail(10)])
-        #     elif input.perform_encoding():
-        #         preview = pd.concat([encoded_data().head(10), encoded_data().tail(10)])
-        #     else:
-        #         preview = pd.concat([cleaned_data().head(10), cleaned_data().tail(10)])
-        # elif input.perform_encoding():
-        #     preview = encoded_data()
-        # else:
-        #     preview = cleaned_data()
-        # return preview
 
 
     # Feature engineering: Target FE Method
     #@reactive.calc
     def target_fe_calc():
-        data = stored_data.get()#encoded_data() if input.perform_encoding() else cleaned_data()
+        data = stored_data.get()
         target = input.target_feat()
 
         if input.target_trans() == 'log':
@@ -882,7 +873,7 @@ def server(input, output, session):
     #PCA Feature Selection
     #@reactive.calc
     def pca_return():
-        data = stored_data.get()#encoded_data() if input.perform_encoding() else cleaned_data()
+        data = stored_data.get()
         s_method = input.feat_select()
         num_col = data.select_dtypes(include=['number']).columns.tolist()
 
@@ -930,7 +921,7 @@ def server(input, output, session):
     #Filter zero variance features
     #@reactive.calc
     def zero_return():
-        data = stored_data.get()#encoded_data() if input.perform_encoding() else cleaned_data()
+        data = stored_data.get()
         s_method = input.feat_select()
 
         if s_method == 'zero':
@@ -956,7 +947,7 @@ def server(input, output, session):
 
     #@reactive.calc
     def manual_remove():
-        data = stored_data.get()#encoded_data() if input.perform_encoding() else cleaned_data()
+        data = stored_data.get()
         if input.feat_select() == 'rem':
             feats_to_remove = input.rem_feat()
             for f in feats_to_remove:
@@ -965,7 +956,7 @@ def server(input, output, session):
     
     #@reactive.calc
     def new_feat():
-        data = stored_data.get()#encoded_data() if input.perform_encoding() else cleaned_data()
+        data = stored_data.get()
         if input.method() == 'new':
             name = input.new_name()
             formula = str(input.new_feat())
