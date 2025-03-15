@@ -499,6 +499,7 @@ app_ui = ui.page_sidebar(
                 ui.output_image("dynamic_plot", height="600px"),
                 ui.h4("Dataset Summary"),
                 ui.output_table("summary_stats"),
+                ui.h4("Correlation Analysis"),
                 ui.output_table("correlation_table")
             ),
             id="tab"
