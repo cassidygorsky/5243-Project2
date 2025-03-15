@@ -3,7 +3,6 @@ from shiny import App, render, ui, reactive, req
 import pandas as pd
 import numpy as np
 import seaborn as sns
-import io
 import re
 import tempfile
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
