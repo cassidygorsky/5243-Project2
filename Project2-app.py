@@ -239,7 +239,7 @@ app_ui = ui.page_sidebar(
 
         # This will conditionally show the file upload input
         ui.output_ui("show_upload"),
-        ui.input_action_button("save_initial_data", "Import Data"),
+        ui.input_action_button("save_initial_data", "Import Data", class_="btn-success"),
         title="Load Data",
     ),
     ui.page_fillable( #page for the tabs
@@ -248,9 +248,11 @@ app_ui = ui.page_sidebar(
                 ui.markdown(
                 """
                 ### **Load Data**
-                In left side panel, choose whether to upload dataset or use the default data. The default data is lung_disease_data.csv as is seen in the Github repository.
-                Afterward, press the Import Data button on the left side panel to load the data. This original data can be seen in a table in the Data Output tab.
-                At any point in the analysis, to reset the data to the original dataset, press the Reset Data button on the left side panel.    
+                IIn left side panel, choose whether to upload a dataset or use the default data. The default data is from [Kaggle](https://www.kaggle.com/datasets/samikshadalvi/lungs-diseases-dataset) 
+                 and contains detailed information about patients suffering from various lung conditions and if they have recovered from their lung disease.
+                 The uploaded datasets can be in various formats (e.g., CSV, Excel, JSON, and RDS).
+                 Afterward, press the Import Data button on the left side panel to load the data. This original data can be seen in a table in the Data Output tab.
+                 At any point in the analysis, to reset the data to the original dataset, press the Reset Data button on the left side panel.    
                 """
                 ),
                 ui.markdown("""
@@ -317,7 +319,6 @@ app_ui = ui.page_sidebar(
                          ui.output_table("table")),
             ui.nav_panel("Cleaning & Preprocessing",
                          # upper part: different operation columns
-                        #ui.input_action_button("save_changes_cleaning", "Save Changes"), #save changes button
                          ui.row(
                              # basic clean (string clean, number convert, duplication remove)
                              ui.column(2,
@@ -372,18 +373,12 @@ app_ui = ui.page_sidebar(
                             ui.column(2,
                                 ui.h4("Encoding"),
                                 ui.input_checkbox("perform_encoding", "Perform Encoding", value=False),
-                               # ui.input_radio_buttons(
-                                #      "encoding_method",
-                                 #    "Encoding Method:",
-                                 #     choices=["onehot", "dummy"],
-                                #      selected="onehot"
-                                 #   ),
                                 ui.input_slider("one_hot_threshold", "One-Hot Encoding Threshold", min=2, max=50, value=10)
                             ),
                             # Save Button (new column on the far right)
                             ui.column(2,
                                 ui.h4("Save Change"),
-                                ui.input_action_button("save_clean_data", "Save Changes")
+                                ui.input_action_button("save_clean_data", "Save Changes",class_="btn-success")
                                      )
                         ),
                         # lower part: left for data preview, right for modifications review
@@ -392,10 +387,6 @@ app_ui = ui.page_sidebar(
                                 ui.h4("Data Set Preview"),
                                 ui.output_table("preview_table")
                             ),
-                              # ui.column(6,
-                                #ui.h4("Modifications (Deleted/Changed Rows)"),
-                                #i.output_table("modifications_table")
-                           #)
                         )
                     ),
             ui.nav_panel("Feature Engineering",
@@ -412,7 +403,7 @@ app_ui = ui.page_sidebar(
                         ),
                              ui.column(3,
                                 ui.row(
-                                 ui.input_action_button("update_fe_data", "Update View"),
+                                 ui.input_action_button("update_fe_data", "Update View/ Save Changes",class_="btn-success"),
                                     )
                                 ),
 
@@ -441,7 +432,6 @@ app_ui = ui.page_sidebar(
                         ui.column(4,
                             ui.panel_conditional(
                                     "input.method.includes('select')",
-                            # "input.method === 'select'",
                             # drop down menu for which feature selection method
                             ui.input_select(
                                 "feat_select",
@@ -485,7 +475,7 @@ app_ui = ui.page_sidebar(
                             ui.column(4,
                                       ui.input_text(
                                           "new_feat",
-                                          "Input New Feature Formula",
+                                          "Input New Feature Formula (e.g. selected_column * 2)",
                                       )),
                             ui.column(4,
                                 ui.input_selectize("feats", "Select Features in Formula:",choices=[], multiple=True))),
