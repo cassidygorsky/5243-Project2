@@ -328,8 +328,8 @@ app_ui = ui.page_sidebar(
                                                           choices=["mean", "median", "most_frequent", "drop"], selected="mean"),
                                        ui.input_checkbox("select_all_na", "Select All Columns for NA Removal",
                                                          value=False),
-                                       #ui.input_checkbox("deselect_all_na", "Deselect All Columns for NA Removal",
-                                                        # value=False),
+                                       ui.input_checkbox("deselect_all_na", "Deselect All Columns for NA Removal",
+                                                         value=False),
                                        ui.input_selectize("drop_na_columns", "Columns to Drop NA:", choices=[],
                                                           multiple=True)
                                        ),
@@ -345,8 +345,8 @@ app_ui = ui.page_sidebar(
                                                           choices=[], multiple=True),
                                        ui.input_checkbox("select_all_outliers", "Select All Numeric Columns",
                                                          value=False),
-                                       #ui.input_checkbox("deselect_all_outliers", "Deselect All Numeric Columns",
-                                                         #value=False),
+                                       ui.input_checkbox("deselect_all_outliers", "Deselect All Numeric Columns",
+                                                         value=False),
                                        ui.input_selectize("outlier_handling", "Handling Option:",
                                                           choices=["delete", "mean", "median", "winsorize"],
                                                           selected="delete")
@@ -357,8 +357,8 @@ app_ui = ui.page_sidebar(
                                        ui.input_checkbox("enable_normalization", "Enable Normalization", value=False),
                                        ui.input_checkbox("select_all_normalize", "Select All Numeric Columns",
                                                          value=False),
-                                       #ui.input_checkbox("deselect_all_normalize", "Deselect All Numeric Columns",
-                                                         #value=False),
+                                       ui.input_checkbox("deselect_all_normalize", "Deselect All Numeric Columns",
+                                                         value=False),
                                        ui.input_selectize("normalize_columns", "Columns to Normalize:", choices=[],
                                                           multiple=True)
                                        ),
@@ -373,7 +373,12 @@ app_ui = ui.page_sidebar(
                                 #      selected="onehot"
                                  #   ),
                                 ui.input_slider("one_hot_threshold", "One-Hot Encoding Threshold", min=2, max=50, value=10)
-                            )
+                            ),
+                            # Save Button (new column on the far right)
+                            ui.column(2,
+                                ui.h4("Save Change"),  
+                                ui.input_action_button("save_clean_data", "Save Changes")  
+                                     )
                         ),
                         # lower part: left for data preview, right for modifications review
                         ui.row(
@@ -645,7 +650,20 @@ def server(input, output, session):
                 ui.update_selectize("outlier_columns", selected=numeric_columns, session=session)
             elif input.deselect_all_outliers():
                 ui.update_selectize("outlier_columns", selected=[], session=session)
-
+    
+    ### save cleaned data
+    @reactive.effect
+    @reactive.event(input.save_clean_data) 
+    def save_final_data():
+        df = encoded_data() if input.perform_encoding() else cleaned_data()  
+        if df is None or df.empty:
+            print("⚠ Warning: No data to save") 
+            return
+        df = df.copy()  
+        stored_data.set(df)  
+        print(f"Data saved successfully, shape: {df.shape}") 
+        return stored_data.get()
+    
     #@reactive.calc
     def cleaned_data():
         df = stored_data.get()
@@ -729,11 +747,7 @@ def server(input, output, session):
             preview = df
         return preview
 
-    ### modifications
-    @output
-    @render.table
-    def modifications_table():
-        return modifications_data()
+
 
     @output
     @render.table
