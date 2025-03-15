@@ -247,7 +247,9 @@ app_ui = ui.page_sidebar(
                 ui.markdown(
                 """
                 ### **Load Data**
-                In left side panel, choose whether to upload dataset or use the default data. The default data is lung_disease_data.csv as is seen in the Github repository.
+                In left side panel, choose whether to upload a dataset or use the default data. The default data is from [Kaggle](https://www.kaggle.com/datasets/samikshadalvi/lungs-diseases-dataset) 
+                and contains detailed information about patients suffering from various lung conditions and if they have recovered from their lung disease.
+                The uploaded datasets can be in various formats (e.g., CSV, Excel, JSON, and RDS)
                 Afterward, press the Import Data button on the left side panel to load the data. This original data can be seen in a table in the Data Output tab.
                 At any point in the analysis, to reset the data to the original dataset, press the Reset Data button on the left side panel.    
                 """
@@ -316,11 +318,9 @@ app_ui = ui.page_sidebar(
             ),
 
             ui.nav_panel("Data Output", 
-                         ui.input_action_button("save_changes_cleaning", "Save Changes"),
                          ui.output_table("table")),
             ui.nav_panel("Cleaning & Preprocessing", 
                          # upper part: different operation columns
-                        #ui.input_action_button("save_changes_cleaning", "Save Changes"), #save changes button
                          ui.row(
                              # basic clean (string clean, number convert, duplication remove)
                              ui.column(2,
@@ -375,18 +375,12 @@ app_ui = ui.page_sidebar(
                             ui.column(2,
                                 ui.h4("Encoding"),
                                 ui.input_checkbox("perform_encoding", "Perform Encoding", value=False),
-                               # ui.input_radio_buttons(
-                                #      "encoding_method", 
-                                 #    "Encoding Method:", 
-                                 #     choices=["onehot", "dummy"], 
-                                #      selected="onehot"
-                                 #   ),
                                 ui.input_slider("one_hot_threshold", "One-Hot Encoding Threshold", min=2, max=50, value=10)
                             ),
                             # Save Button (new column on the far right)
                             ui.column(2,
-                                ui.h4("Save Change"),  
-                                ui.input_action_button("save_clean_data", "Save Changes")  
+                                ui.h4("Save Changes"),  
+                                ui.input_action_button("save_clean_data", "Save Changes",class_="btn-success")  
                                      )
                         ),
                         # lower part: left for data preview, right for modifications review
@@ -395,10 +389,6 @@ app_ui = ui.page_sidebar(
                                 ui.h4("Data Set Preview"),
                                 ui.output_table("preview_table")
                             ),
-                              # ui.column(6,
-                                #ui.h4("Modifications (Deleted/Changed Rows)"),
-                                #i.output_table("modifications_table")
-                           #)
                         )
                     ),
             ui.nav_panel("Feature Engineering",
@@ -415,7 +405,7 @@ app_ui = ui.page_sidebar(
                              ui.column(3,
                                 ui.row(
                                  ui.input_action_button(
-                                 "update_fe_data", "Update View"),
+                                 "update_fe_data", "Update View",class_="btn-success"),
                                     ui.input_action_button(
                                  "reset_fe_data", "Reset to Cleaned Data", )
                                     )
@@ -446,7 +436,6 @@ app_ui = ui.page_sidebar(
                         ui.column(4,
                             ui.panel_conditional(
                                     "input.method.includes('select')",
-                            # "input.method === 'select'",
                             # drop down menu for which feature selection method
                             ui.input_select(
                                 "feat_select",
@@ -481,7 +470,6 @@ app_ui = ui.page_sidebar(
                         ui.panel_conditional(
                             "input.method.includes('new')",
                             # drop down menu for which feature transformation method
-                            #     ui.output_text_verbatim("instructions"),############3
                         ui.row(
                         ui.column(4,
                                       ui.input_text(
@@ -491,7 +479,7 @@ app_ui = ui.page_sidebar(
                             ui.column(4,
                                       ui.input_text(
                                           "new_feat",
-                                          "Input New Feature Formula",
+                                          "Input New Feature Formula (e.g. selected_column * 2)",
                                       )),
                             ui.column(4,
                                 ui.input_selectize("feats", "Select Features in Formula:",choices=[], multiple=True))),
@@ -567,7 +555,6 @@ def server(input, output, session):
             print(f"Metadata error: {e}")
             return None
 
-
         #Read file based on format
         try:
             if ext == "csv":
@@ -611,22 +598,6 @@ def server(input, output, session):
     @reactive.event(input.save_initial_data)
     def save_initial_data():
         stored_data.set(get_data())
-    
-    ## TEST SAVE BUTTON. To delete
-    #save updated data after cleaning
-    @reactive.effect
-    @reactive.event(input.save_changes_cleaning)
-    def modify_data_cleaning():
-        ##"""Modify data when 'Save Changes' is clicked in Tab 1."""
-        df = stored_data.get()
-        if df is None or df.empty:
-            print("⚠ Warning: No data to modify")
-        df = df.copy()  #  Create a new copy to trigger reactivity
-        df["new_column"] = 2  # example modification
-        stored_data.set(df)
-        print(f"Data updated, new shape: {df.shape}")
-        return stored_data.get()
-    ## TO DELETE
 
     @reactive.effect
     def update_column_choices():
@@ -905,21 +876,6 @@ def server(input, output, session):
                 return pca_result, text
             except Exception:
                 return None
-
-    #Plot of PCA--it wasn't working so i left it out for now
-    # @output
-    # @render.plot
-    # def pca_plot():
-    #     if pca_return() is not None and input.num_components()>1:
-    #         pca_result, text = pca_return()
-    #
-    #         plt.figure()
-    #         plt.scatter(pca_result[:, 0], pca_result[:, 1], alpha=0.7, edgecolors='k')
-    #         plt.xlabel('Principle 1')
-    #         plt.ylabel('Principle 2')
-    #         plt.title('Principle 1 vs Principle 2')
-    #
-    #         return plt
 
     @output
     @render.text
